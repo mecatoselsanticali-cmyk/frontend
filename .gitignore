@@ -1,0 +1,6 @@
+.claude
+node_modules
+dist
+.env.example
+.env
+CLAUDE.md
