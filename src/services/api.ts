@@ -9,9 +9,17 @@ export const adminApi = {
   /** Verifica la cookie httpOnly y devuelve el perfil del admin autenticado. */
   me: () => adminHttp.get("/auth/me").then((r) => r.data),
 
-  /** Solo ADMIN/MANAGER (tienen correo) — un cajero nunca llega a este flujo. */
+  /**
+   * Solo ADMIN/MANAGER (tienen correo) — un cajero nunca llega a este
+   * flujo. Timeout más largo que el default de `adminHttp` (8s, ver
+   * httpClient.ts) porque este endpoint espera el envío real de un correo
+   * SMTP (DNS + TLS + auth + entrega) antes de responder — 8s alcanza
+   * para una consulta a la base normal, pero es ajustado para un
+   * round-trip SMTP, sobre todo si Render tuvo que "despertar" el
+   * servicio de un cold start (plan free) justo antes de esta petición.
+   */
   forgotPassword: (email: string) =>
-    adminHttp.post("/auth/forgot-password", { email }).then((r) => r.data),
+    adminHttp.post("/auth/forgot-password", { email }, { timeout: 30000 }).then((r) => r.data),
   resetPassword: (token: string, password: string) =>
     adminHttp.post("/auth/reset-password", { token, password }).then((r) => r.data),
 
