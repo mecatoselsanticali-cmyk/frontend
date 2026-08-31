@@ -64,7 +64,7 @@ function RootRedirect() {
 
   if (!target) {
     return (
-      <div className="h-screen w-screen flex items-center justify-center text-neutral-400 text-sm">
+      <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
         Cargando...
       </div>
     );

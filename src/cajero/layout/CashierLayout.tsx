@@ -95,7 +95,7 @@ export default function CashierLayout() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden bg-white">
+    <div className="h-dvh w-screen flex flex-col overflow-hidden bg-white">
       <header className="h-14 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-6">
           <span className="font-bold text-sm">Mecatos el Santi</span>

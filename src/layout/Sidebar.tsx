@@ -61,8 +61,15 @@ export default function Sidebar({ name, role, isOpen = false, onClose }: Sidebar
           aria-hidden="true"
         />
       )}
+      {/* `h-dvh`, no `h-screen` (`100vh`) — bug real visto en iOS Safari: con
+          la barra de direcciones/toolbar visibles, `100vh` mide más que el
+          viewport realmente visible, así que este `<aside>` (con `flex-col`
+          y solo `<nav>` scrolleable) empujaba el bloque de perfil+"Cerrar
+          sesión" fuera de la pantalla, sin forma de hacer scroll hasta ahí
+          (no es parte del `<nav>` scrolleable). `h-dvh` sigue el viewport
+          visible real en cada momento, no el máximo teórico. */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-60 h-screen bg-neutral-900 text-white flex flex-col transform transition-transform duration-200 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 h-dvh bg-neutral-900 text-white flex flex-col transform transition-transform duration-200 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         } md:static md:translate-x-0 md:z-auto`}
       >

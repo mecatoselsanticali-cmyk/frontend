@@ -20,7 +20,7 @@ export default function RequireAuth({ children }: { children: JSX.Element }) {
 
   if (status === "loading") {
     return (
-      <div className="h-screen w-screen flex items-center justify-center text-neutral-400 text-sm">
+      <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
         Verificando sesión...
       </div>
     );

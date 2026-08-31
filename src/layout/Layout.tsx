@@ -83,7 +83,7 @@ export default function Layout() {
     : undefined;
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-neutral-50">
+    <div className="flex h-dvh w-screen overflow-hidden bg-neutral-50">
       <Sidebar
         name={admin?.name}
         role={admin?.role}

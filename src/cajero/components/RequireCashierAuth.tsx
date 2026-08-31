@@ -18,7 +18,7 @@ export default function RequireCashierAuth({ children }: { children: JSX.Element
 
   if (status === "loading") {
     return (
-      <div className="h-screen w-screen flex items-center justify-center text-neutral-400 text-sm bg-neutral-900">
+      <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm bg-neutral-900">
         Verificando sesión...
       </div>
     );
