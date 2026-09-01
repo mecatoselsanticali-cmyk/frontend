@@ -10,7 +10,14 @@ export interface OrderLine {
   subtotal: number;
 }
 
-export type ModalType = "EXPENSE" | "SHIFT" | "CUSTOMER" | "CASH_PAYMENT" | "INVOICE_PROMPT" | null;
+export type ModalType =
+  | "EXPENSE"
+  | "STOCK_LOSS"
+  | "SHIFT"
+  | "CUSTOMER"
+  | "CASH_PAYMENT"
+  | "INVOICE_PROMPT"
+  | null;
 
 interface PosState {
   // Sesión

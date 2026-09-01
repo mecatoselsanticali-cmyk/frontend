@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Swal from "sweetalert2";
 import { usePosStore } from "../../store/posStore";
 import { posApi } from "../../services/posApi";
 
@@ -15,6 +16,7 @@ export default function ExpenseModal() {
     setError("");
     try {
       await posApi.registerExpense(concept, Number(amount));
+      Swal.fire({ title: "Gasto registrado", icon: "success", timer: 1500, showConfirmButton: false });
       closeModal();
     } catch (err: any) {
       setError(err.message || "No se pudo registrar el gasto");
@@ -26,7 +28,18 @@ export default function ExpenseModal() {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 !m-0">
       <div className="bg-white rounded-2xl p-6 w-96 shadow-xl">
-        <h3 className="text-lg font-bold mb-4">Gasto menor de caja</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-bold">Gasto caja menor</h3>
+          <button
+              type="button"
+              onClick={closeModal}
+              aria-label="Cerrar"
+              className="text-neutral-400 hover:text-neutral-600 text-xl leading-none"
+            >
+              ✕
+            </button>
+        </div>
+        
 
         <label className="text-xs text-neutral-500">Concepto</label>
         <input

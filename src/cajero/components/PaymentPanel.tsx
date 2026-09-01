@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Banknote, Trash2, Coins, Smartphone, CreditCard, Bike, type LucideIcon } from "lucide-react";
 import { usePosStore } from "../store/posStore";
 import { generateLocalTicketId } from "../db/offlineDb";
 import { posApi } from "../services/posApi";
@@ -7,6 +8,13 @@ import SaleReceipt from "./SaleReceipt";
 type PaymentMethod = "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP";
 
 const TOPE_CONSUMIDOR_FINAL = 509000;
+
+const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: LucideIcon }[] = [
+  { key: "CASH", label: "Efectivo", icon: Coins },
+  { key: "NEQUI", label: "Nequi", icon: Smartphone },
+  { key: "CARD", label: "Datáfono", icon: CreditCard },
+  { key: "DELIVERY_APP", label: "App Delivery", icon: Bike },
+];
 
 export default function PaymentPanel() {
   const order = usePosStore((s) => s.order);
@@ -147,16 +155,18 @@ export default function PaymentPanel() {
           <button
             onClick={() => openModal("EXPENSE")}
             title="Gasto menor de caja"
-            className="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-sm"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-700"
           >
-            💸
+            <Banknote size={16} />
+            Gasto
           </button>
           <button
-            onClick={() => openModal("SHIFT")}
-            title="Apertura / Cierre de turno"
-            className="w-9 h-9 rounded-full bg-neutral-100 hover:bg-neutral-200 flex items-center justify-center text-sm"
+            onClick={() => openModal("STOCK_LOSS")}
+            title="Registrar merma de stock"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs font-medium text-neutral-700"
           >
-            🧾
+            <Trash2 size={16} />
+            Merma
           </button>
         </div>
       </div>
@@ -165,30 +175,27 @@ export default function PaymentPanel() {
         <div>
           <h3 className="text-sm font-semibold text-neutral-500 mb-2">Método de pago</h3>
           <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { key: "CASH", label: "Efectivo", icon: "💵" },
-                { key: "NEQUI", label: "Nequi", icon: "📱" },
-                { key: "CARD", label: "Datáfono", icon: "💳" },
-                { key: "DELIVERY_APP", label: "App Delivery", icon: "🛵" },
-              ] as { key: PaymentMethod; label: string; icon: string }[]
-            ).map((m) => (
-              <button
-                key={m.key}
-                onClick={() => {
-                  setSelectedMethod(m.key);
-                  if (m.key === "CASH") openModal("CASH_PAYMENT");
-                }}
-                className={`rounded-xl py-4 flex flex-col items-center gap-1 border-2 transition-colors ${
-                  selectedMethod === m.key
-                    ? "border-brand-600 bg-brand-50"
-                    : "border-transparent bg-white shadow-sm"
-                }`}
-              >
-                <span className="text-2xl">{m.icon}</span>
-                <span className="text-xs font-medium">{m.label}</span>
-              </button>
-            ))}
+            {PAYMENT_METHODS.map((m) => {
+              const Icon = m.icon;
+              const active = selectedMethod === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => {
+                    setSelectedMethod(m.key);
+                    if (m.key === "CASH") openModal("CASH_PAYMENT");
+                  }}
+                  className={`rounded-xl py-4 flex flex-col items-center gap-1 border-2 transition-colors ${
+                    active ? "border-brand-600 bg-brand-50" : "border-transparent bg-white shadow-sm"
+                  }`}
+                >
+                  <Icon size={22} className={active ? "text-brand-600" : "text-neutral-400"} />
+                  <span className={`text-xs font-medium ${active ? "text-brand-700" : "text-neutral-600"}`}>
+                    {m.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

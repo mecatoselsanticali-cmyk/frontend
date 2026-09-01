@@ -42,6 +42,7 @@ export default function CashierLayout() {
   const cashierName = usePosStore((s) => s.cashierName);
   const setShiftId = usePosStore((s) => s.setShiftId);
   const activeModal = usePosStore((s) => s.activeModal);
+  const openModal = usePosStore((s) => s.openModal);
 
   // Verifica contra el servidor si el cajero ya tiene un turno abierto —
   // nunca se asume por localStorage (ver punto 30 de CLAUDE.md). Se hace
@@ -107,7 +108,7 @@ export default function CashierLayout() {
 
   return (
     <div className="h-dvh w-screen flex flex-col overflow-hidden bg-white">
-      <header className="h-14 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between px-4 shrink-0">
+      <header className="relative h-14 border-b border-neutral-200 bg-neutral-900 text-white flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-6">
           <span className="font-bold text-sm">Mecatos el Santi</span>
           <nav className="flex gap-1">
@@ -127,6 +128,21 @@ export default function CashierLayout() {
             ))}
           </nav>
         </div>
+
+        {/* Mismo look que el botón "Iniciar turno" de `ShiftRequiredNotice`
+            (degradé de marca), centrado en el header — antes vivía como un
+            ícono 🧾 discreto en `PaymentPanel`, pero cerrar turno es una
+            acción que debería ser igual de visible que abrirlo. Abre el
+            mismo `ShiftModal` que ya maneja apertura Y cierre; solo cambia
+            el texto/estilo de este disparador. */}
+        <button
+          onClick={() => openModal("SHIFT")}
+          title="Cerrar turno"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-bold text-sm px-5 py-2 rounded-xl shadow-lg shadow-brand-900/40 transition-all"
+        >
+          Finalizar turno
+        </button>
+
         <div className="flex items-center gap-3 text-xs text-neutral-300">
           <span>
             {branchName} · {cashierName}

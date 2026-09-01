@@ -11,7 +11,11 @@ export const posApi = {
   /** Verifica la cookie httpOnly y devuelve los datos de la sesión actual. */
   me: () => posHttp.get("/auth/me").then((r) => r.data),
 
-  getCatalog: () => posHttp.get("/catalog").then((r) => r.data),
+  // Paginado desde el backend (ver punto 46 de CLAUDE.md) — acepta
+  // search (nombre o SKU) y category además de page/pageSize; la
+  // respuesta trae { data, total, page, pageSize, totalPages, categories }.
+  getCatalog: (params?: { page?: number; pageSize?: number; search?: string; category?: string }) =>
+    posHttp.get("/catalog", { params }).then((r) => r.data),
 
   createSale: (payload: any) => posHttp.post("/sales", payload).then((r) => r.data),
 
@@ -57,6 +61,15 @@ export const posApi = {
 
   registerExpense: (concept: string, amount: number) =>
     posHttp.post("/expenses", { concept, amount }).then((r) => r.data),
+
+  // Merma de stock sin venta detrás (producto dañado/vencido, consumo
+  // interno de un empleado, etc.) — reduce ProductStock directo.
+  registerStockLoss: (data: {
+    productId: string;
+    quantity: number;
+    reason: "DAMAGED" | "STAFF_CONSUMPTION" | "OTHER";
+    note?: string;
+  }) => posHttp.post("/stock-losses", data).then((r) => r.data),
 
   // Compras del día — producto + cantidad, ligadas a inventario (ya no es
   // el flujo informal con foto de recibo; ver StockModal.tsx del panel

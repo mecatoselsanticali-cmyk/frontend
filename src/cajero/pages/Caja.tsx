@@ -4,6 +4,7 @@ import OrderPanel from "../components/OrderPanel";
 import PaymentPanel from "../components/PaymentPanel";
 import ShiftRequiredNotice from "../components/ShiftRequiredNotice";
 import ExpenseModal from "../components/modals/ExpenseModal";
+import StockLossModal from "../components/modals/StockLossModal";
 import CustomerModal from "../components/modals/CustomerModal";
 import CashPaymentModal from "../components/modals/CashPaymentModal";
 import InvoicePromptModal from "../components/modals/InvoicePromptModal";
@@ -31,6 +32,7 @@ export default function Caja() {
       <PaymentPanel />
 
       {activeModal === "EXPENSE" && <ExpenseModal />}
+      {activeModal === "STOCK_LOSS" && <StockLossModal />}
       {activeModal === "CUSTOMER" && <CustomerModal />}
       {activeModal === "CASH_PAYMENT" && <CashPaymentModal />}
       {activeModal === "INVOICE_PROMPT" && <InvoicePromptModal />}
