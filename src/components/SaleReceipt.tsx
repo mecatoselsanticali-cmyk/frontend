@@ -93,7 +93,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
         <div id="sale-receipt" className="p-8">
           <div className="flex flex-col items-center text-center border-b border-neutral-200 pb-4 mb-4">
             <img
-              src="/img/logo-santi-trimmed.png"
+              src="/img/logo-santi-trimmed.webp"
               alt="Mecatos el Santi"
               className="w-24 mb-2 select-none"
               draggable={false}
