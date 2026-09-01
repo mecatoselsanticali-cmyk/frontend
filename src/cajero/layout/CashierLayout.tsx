@@ -41,6 +41,7 @@ export default function CashierLayout() {
   const branchName = usePosStore((s) => s.branchName);
   const cashierName = usePosStore((s) => s.cashierName);
   const setShiftId = usePosStore((s) => s.setShiftId);
+  const shiftId = usePosStore((s) => s.shiftId);
   const activeModal = usePosStore((s) => s.activeModal);
   const openModal = usePosStore((s) => s.openModal);
 
@@ -134,14 +135,21 @@ export default function CashierLayout() {
             ícono 🧾 discreto en `PaymentPanel`, pero cerrar turno es una
             acción que debería ser igual de visible que abrirlo. Abre el
             mismo `ShiftModal` que ya maneja apertura Y cierre; solo cambia
-            el texto/estilo de este disparador. */}
-        <button
-          onClick={() => openModal("SHIFT")}
-          title="Cerrar turno"
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-bold text-sm px-5 py-2 rounded-xl shadow-lg shadow-brand-900/40 transition-all"
-        >
-          Finalizar turno
-        </button>
+            el texto/estilo de este disparador. Solo tiene sentido cerrar un
+            turno que existe — `shiftId` es el mismo valor que `Caja.tsx`/
+            `Facturas.tsx`/`Compras.tsx` usan para decidir si muestran
+            `ShiftRequiredNotice` (ver punto 31), así que este botón
+            desaparece exactamente cuando esas pantallas ya están mostrando
+            el aviso de "Iniciar turno" en vez de datos reales. */}
+        {shiftId && (
+          <button
+            onClick={() => openModal("SHIFT")}
+            title="Cerrar turno"
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-bold text-sm px-5 py-2 rounded-xl shadow-lg shadow-brand-900/40 transition-all"
+          >
+            Finalizar turno
+          </button>
+        )}
 
         <div className="flex items-center gap-3 text-xs text-neutral-300">
           <span>
