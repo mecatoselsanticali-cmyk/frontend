@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { adminApi } from "../services/api";
+import { useAuthSession } from "../components/AuthProvider";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -42,7 +43,12 @@ export default function Layout() {
   const location = useLocation();
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranch, setSelectedBranch] = useSelectedBranch();
-  const [admin, setAdmin] = useState<{ name: string; role: string; branchId?: string } | null>(null);
+  // Perfil del admin/gerente — viene del chequeo único que hace
+  // `<AuthProvider>` al montar la app (ver components/AuthProvider.tsx),
+  // no de una llamada propia a `adminApi.me()`. Por eso `Layout` solo se
+  // monta cuando `RequireAuth` ya confirmó que `admin` existe (ver
+  // App.tsx) — no hace falta un estado "cargando" acá.
+  const { admin } = useAuthSession();
   // Solo importa en móvil (`< md`) — en desktop el Sidebar siempre está
   // visible y estas props no hacen nada, ver Sidebar.tsx.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -60,22 +66,21 @@ export default function Layout() {
       .catch(() => setBranches([]));
   }, []);
 
+  // Un gerente de sede siempre queda fijado a su propia sede — se fuerza
+  // acá por si el selector quedó en "todas las sedes" (o en otra sede) de
+  // una sesión anterior como administrador en el mismo navegador. El
+  // backend igual lo exige sin importar lo que mande el frontend (ver
+  // resolveBranchFilter en adminController.ts). `admin` solo cambia una
+  // vez por sesión (lo fija `<AuthProvider>` al resolver el chequeo o
+  // justo después de un login exitoso), así que no hace falta
+  // `setSelectedBranch` en las dependencias — evita un loop si esa
+  // función no fuera estable entre renders.
   useEffect(() => {
-    adminApi
-      .me()
-      .then((me) => {
-        setAdmin(me);
-        // Un gerente de sede siempre queda fijado a su propia sede — se
-        // fuerza acá por si el selector quedó en "todas las sedes" (o en
-        // otra sede) de una sesión anterior como administrador en el mismo
-        // navegador. El backend igual lo exige sin importar lo que mande
-        // el frontend (ver resolveBranchFilter en adminController.ts).
-        if (me.role === "MANAGER" && me.branchId) {
-          setSelectedBranch(String(me.branchId));
-        }
-      })
-      .catch(() => setAdmin(null));
-  }, []);
+    if (admin?.role === "MANAGER" && admin.branchId) {
+      setSelectedBranch(String(admin.branchId));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin]);
 
   const isManager = admin?.role === "MANAGER";
   const lockedBranchName = isManager

@@ -1,24 +1,19 @@
-import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { adminApi } from "../services/api";
+import { useAuthSession } from "./AuthProvider";
 
 /**
  * Como el token vive en una cookie httpOnly, el frontend no puede leerlo
  * para saber "¿hay sesión?" — en su lugar, le pregunta al backend
- * (GET /auth/me), que valida la cookie del lado del servidor. Por eso esta
- * guarda es asíncrona con un estado de carga intermedio.
+ * (GET /auth/me), que valida la cookie del lado del servidor. Ya no hace
+ * esa consulta por su cuenta: lee el resultado del chequeo único que hace
+ * `<AuthProvider>` al montar la app (ver components/AuthProvider.tsx) —
+ * antes este componente tenía su propio `useEffect` con `adminApi.me()`,
+ * uno de los hasta 4 sitios que llamaban al mismo endpoint por separado.
  */
 export default function RequireAuth({ children }: { children: JSX.Element }) {
-  const [status, setStatus] = useState<"loading" | "authed" | "unauthed">("loading");
+  const { status, admin } = useAuthSession();
 
-  useEffect(() => {
-    adminApi
-      .me()
-      .then(() => setStatus("authed"))
-      .catch(() => setStatus("unauthed"));
-  }, []);
-
-  if (status === "loading") {
+  if (status === "checking") {
     return (
       <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
         Verificando sesión...
@@ -26,7 +21,7 @@ export default function RequireAuth({ children }: { children: JSX.Element }) {
     );
   }
 
-  if (status === "unauthed") {
+  if (!admin) {
     return <Navigate to="/login" replace />;
   }
 

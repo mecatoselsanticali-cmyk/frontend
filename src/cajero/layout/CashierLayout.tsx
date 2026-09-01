@@ -6,6 +6,7 @@ import { syncPendingSales } from "../services/syncService";
 import { ReceiptText, ShoppingCart, Wallet } from "lucide-react";
 import ShiftModal from "../components/modals/ShiftModal";
 import MobileBlockScreen from "../components/MobileBlockScreen";
+import { useAuthSession } from "../../components/AuthProvider";
 
 const tabs = [
   { to: "/cajero/caja", label: "Caja", icon: <Wallet color="#ffffff" size={20}/> },
@@ -34,6 +35,7 @@ function useIsMobile() {
 export default function CashierLayout() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { clearAuthSession } = useAuthSession();
   const setSession = usePosStore((s) => s.setSession);
   const clearSession = usePosStore((s) => s.clearSession);
   const branchName = usePosStore((s) => s.branchName);
@@ -87,6 +89,15 @@ export default function CashierLayout() {
       // aunque falle la llamada, igual limpiamos el estado local y navegamos
     }
     clearSession();
+    // Este logout navega con React Router (`navigate`, no recarga la
+    // página) — a diferencia del logout del admin (`Sidebar.tsx`), que sí
+    // fuerza `window.location.href` y por eso reinicia solo el estado
+    // compartido de `<AuthProvider>` desde cero al recargar. Acá hay que
+    // limpiarlo a mano: si no, `cashier` seguiría teniendo el perfil viejo
+    // en memoria y `Login.tsx` (que redirige lejos de /login apenas ve una
+    // sesión "autenticada") rebotaría de inmediato de vuelta a
+    // /cajero/caja, dejando al cajero sin forma real de cerrar sesión.
+    clearAuthSession();
     navigate("/login");
   };
 

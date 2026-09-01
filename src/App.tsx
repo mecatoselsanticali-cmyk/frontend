@@ -1,11 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useEffect, useState, lazy, Suspense } from "react";
+import { lazy, Suspense } from "react";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Layout from "./layout/Layout";
 import RequireAuth from "./components/RequireAuth";
 import RequireRole from "./components/RequireRole";
-import { adminApi } from "./services/api";
+import { AuthProvider, useAuthSession } from "./components/AuthProvider";
 
 // Cargadas perezosamente (`React.lazy`, ver punto 42 de
 // admin-frontend/CLAUDE.md) — antes eran imports estáticos, así que TODAS
@@ -28,49 +28,24 @@ const FinanzasReportes = lazy(() => import("./pages/FinanzasReportes"));
 
 import RequireCashierAuth from "./cajero/components/RequireCashierAuth";
 import CashierLayout from "./cajero/layout/CashierLayout";
-import { posApi } from "./cajero/services/posApi";
 
 const Caja = lazy(() => import("./cajero/pages/Caja"));
 const Facturas = lazy(() => import("./cajero/pages/Facturas"));
 const ComprasCajero = lazy(() => import("./cajero/pages/Compras"));
 
 /**
- * Decide a dónde mandar "/" según qué sesión activa exista. Como el token
- * vive en una cookie httpOnly (no en localStorage), no podemos saber esto
- * de forma síncrona — hay que preguntarle al backend. Se consulta primero
- * /api/admin/auth/me y, si no hay sesión admin, /api/pos/auth/me.
+ * Decide a dónde mandar "/" según qué sesión activa exista — ahora solo
+ * LEE el resultado ya calculado por `<AuthProvider>` (ver
+ * components/AuthProvider.tsx) en vez de volver a consultar `/me` por su
+ * cuenta, que era el diseño anterior. `/` no es una página real (nadie le
+ * pone contenido), así que igual sigue esperando a que el chequeo
+ * termine antes de decidir — a diferencia de `/login`, acá no hay nada
+ * que "renderizar de inmediato".
  */
 function RootRedirect() {
-  const [target, setTarget] = useState<string | null>(null);
+  const { status, admin, cashier } = useAuthSession();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function resolve() {
-      try {
-        await adminApi.me();
-        if (!cancelled) setTarget("/dashboard");
-        return;
-      } catch {
-        // sin sesión admin, seguimos probando con la de cajero
-      }
-      try {
-        await posApi.me();
-        if (!cancelled) setTarget("/cajero/caja");
-        return;
-      } catch {
-        // sin ninguna sesión activa
-      }
-      if (!cancelled) setTarget("/login");
-    }
-
-    resolve();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (!target) {
+  if (status === "checking") {
     return (
       <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
         Cargando...
@@ -78,7 +53,9 @@ function RootRedirect() {
     );
   }
 
-  return <Navigate to={target} replace />;
+  if (admin) return <Navigate to="/dashboard" replace />;
+  if (cashier) return <Navigate to="/cajero/caja" replace />;
+  return <Navigate to="/login" replace />;
 }
 
 // Fallback de `<Suspense>` mientras se descarga el chunk de una página
@@ -97,68 +74,70 @@ function RouteLoadingFallback() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<RouteLoadingFallback />}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Suspense fallback={<RouteLoadingFallback />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Área Administrador */}
-          <Route
-            element={
-              <RequireAuth>
-                <Layout />
-              </RequireAuth>
-            }
-          >
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Área Administrador */}
             <Route
-              path="/sedes"
               element={
-                <RequireRole roles={["ADMIN"]}>
-                  <Sedes />
-                </RequireRole>
+                <RequireAuth>
+                  <Layout />
+                </RequireAuth>
               }
-            />
-            <Route path="/inventario" element={<Inventario />} />
-            <Route path="/compras" element={<Compras />} />
-            <Route path="/ventas" element={<Ventas />} />
-            <Route path="/cuentas-por-pagar" element={<CuentasPorPagar />} />
-            <Route path="/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
-            <Route path="/gastos" element={<Gastos />} />
+            >
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route
+                path="/sedes"
+                element={
+                  <RequireRole roles={["ADMIN"]}>
+                    <Sedes />
+                  </RequireRole>
+                }
+              />
+              <Route path="/inventario" element={<Inventario />} />
+              <Route path="/compras" element={<Compras />} />
+              <Route path="/ventas" element={<Ventas />} />
+              <Route path="/cuentas-por-pagar" element={<CuentasPorPagar />} />
+              <Route path="/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
+              <Route path="/gastos" element={<Gastos />} />
+              <Route
+                path="/personal"
+                element={
+                  <RequireRole roles={["ADMIN"]}>
+                    <Personal />
+                  </RequireRole>
+                }
+              />
+              <Route path="/dian-config" element={<DianConfig />} />
+              <Route path="/finanzas" element={<Navigate to="/finanzas/caja" replace />} />
+              <Route path="/finanzas/caja" element={<FinanzasCaja />} />
+              <Route path="/finanzas/reportes" element={<FinanzasReportes />} />
+            </Route>
+
+            {/* Área Cajero */}
             <Route
-              path="/personal"
+              path="/cajero"
               element={
-                <RequireRole roles={["ADMIN"]}>
-                  <Personal />
-                </RequireRole>
+                <RequireCashierAuth>
+                  <CashierLayout />
+                </RequireCashierAuth>
               }
-            />
-            <Route path="/dian-config" element={<DianConfig />} />
-            <Route path="/finanzas" element={<Navigate to="/finanzas/caja" replace />} />
-            <Route path="/finanzas/caja" element={<FinanzasCaja />} />
-            <Route path="/finanzas/reportes" element={<FinanzasReportes />} />
-          </Route>
+            >
+              <Route index element={<Navigate to="caja" replace />} />
+              <Route path="caja" element={<Caja />} />
+              <Route path="facturas" element={<Facturas />} />
+              <Route path="compras" element={<ComprasCajero />} />
+            </Route>
 
-          {/* Área Cajero */}
-          <Route
-            path="/cajero"
-            element={
-              <RequireCashierAuth>
-                <CashierLayout />
-              </RequireCashierAuth>
-            }
-          >
-            <Route index element={<Navigate to="caja" replace />} />
-            <Route path="caja" element={<Caja />} />
-            <Route path="facturas" element={<Facturas />} />
-            <Route path="compras" element={<ComprasCajero />} />
-          </Route>
-
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="*" element={<RootRedirect />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="*" element={<RootRedirect />} />
+          </Routes>
+        </Suspense>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

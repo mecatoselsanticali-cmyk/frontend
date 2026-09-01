@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { adminApi } from "../services/api";
 import { posApi } from "../cajero/services/posApi";
 import { AuthShell, GlassCard, BackButton } from "../components/AuthShell";
+import { useAuthSession } from "../components/AuthProvider";
 import {
   Delete,
   Eye,
@@ -49,7 +50,25 @@ function RoleCard({
 
 export default function Login() {
   const navigate = useNavigate();
+  const { status, admin, cashier, setAdminSession, setCashierSession } = useAuthSession();
   const [mode, setMode] = useState<Mode>("CHOOSE");
+
+  // Si el chequeo de fondo (`<AuthProvider>`, ver punto 42 de
+  // admin-frontend/CLAUDE.md) resuelve que YA hay una sesión activa —
+  // sea porque el navegador todavía tenía una cookie válida al entrar a
+  // /login, o porque el login que se acaba de hacer más abajo actualizó
+  // el estado compartido — manda para la zona que corresponda. A
+  // propósito NO bloquea el render de este componente mientras
+  // `status === "checking"`: el formulario de login ya se pintó antes de
+  // que este efecto tenga algo que hacer.
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    if (admin) {
+      navigate("/dashboard", { replace: true });
+    } else if (cashier) {
+      navigate("/cajero/caja", { replace: true });
+    }
+  }, [status, admin, cashier, navigate]);
 
   // --- Admin ---
   const [email, setEmail] = useState("");
@@ -82,8 +101,12 @@ export default function Login() {
     setAdminLoading(true);
     setAdminError("");
     try {
-      await adminApi.login(email, password);
-      navigate("/dashboard");
+      const { user } = await adminApi.login(email, password);
+      // Actualiza el estado compartido con el perfil que ya trajo el login
+      // (id/name/role/branchId) — evita otro viaje a /me solo para
+      // confirmar algo que la respuesta del login ya dice. El efecto de
+      // arriba se encarga de navegar en cuanto ve `status: "authenticated"`.
+      setAdminSession(user);
     } catch (err: any) {
       setAdminError(err.message || "Credenciales inválidas");
     } finally {
@@ -119,10 +142,13 @@ export default function Login() {
     setCashierLoading(true);
     setCashierError("");
     try {
-      await posApi.login(selectedBranch._id, fullPin);
+      const { cashier } = await posApi.login(selectedBranch._id, fullPin);
       // La cookie httpOnly ya quedó puesta por el backend (Set-Cookie).
-      // CashierLayout hidrata el store llamando a /auth/me al montar.
-      navigate("/cajero/caja");
+      // CashierLayout hidrata el store llamando a /auth/me al montar —
+      // esto solo actualiza el estado compartido de auth (gating), no el
+      // store de Zustand. El efecto de arriba navega en cuanto ve
+      // `status: "authenticated"`.
+      setCashierSession(cashier);
     } catch (err: any) {
       setCashierError(err.message || "PIN inválido");
       setPin("");
