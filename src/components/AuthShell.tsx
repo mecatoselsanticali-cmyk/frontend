@@ -17,7 +17,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 
       <div className="relative w-full max-w-md flex flex-col items-center">
         <img
-          src="/img/logo-santi-trimmed.png"
+          src="/img/logo-santi-trimmed.webp"
           alt="Mecatos el Santi"
           draggable={false}
           className="w-44 sm:w-52 select-none drop-shadow-[0_0_40px_rgba(234,88,12,0.35)]"
