@@ -57,7 +57,22 @@ function SummaryRow({ label, value, bold }: { label: string; value: number; bold
  * "Total" de esta columna NO es lo que el cajero declara al cerrar, ver
  * la nota en el JSX de abajo).
  */
-function ShiftSummary({ shiftId }: { shiftId: string }) {
+function ShiftSummary({
+  shiftId,
+  boxRef,
+}: {
+  shiftId: string;
+  /** Ref callback puesto en la caja con borde (NO en el `<h4>` de arriba
+   * ni en el wrapper completo) — así `ShiftModal.tsx` mide exactamente
+   * lo mismo que `StockVerificationV2` copia como su propia altura. Un
+   * callback ref (no `useRef` normal) porque este componente devuelve
+   * `null` mientras `loading`/`error`/sin datos — un `useRef` fijo
+   * nunca se "reengancharía" solo cuando la caja real aparece después
+   * de la carga async; un callback ref sí se vuelve a invocar cada vez
+   * que React monta/desmonta el nodo, incluida la primera vez que
+   * realmente existe. */
+  boxRef?: (el: HTMLDivElement | null) => void;
+}) {
   const [summary, setSummary] = useState<ShiftSummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -91,42 +106,43 @@ function ShiftSummary({ shiftId }: { shiftId: string }) {
   const nequiAndCardTotal = summary.initialNequi + nequiAndCardSales;
 
   return (
-    <div className="rounded-lg overflow-hidden border border-neutral-200 mb-5">
-      <h4 className="text-sm font-semibold text-neutral-700 px-3 pt-3 pb-2">Resumen del turno</h4>
-
-      {/* Fila superior: total vendido por cada método de pago */}
-      <div className="grid grid-cols-4 text-center text-xs border-t border-neutral-200">
-        <div className="bg-green-100 text-green-700 font-semibold py-1.5">Efectivo</div>
-        <div className="bg-purple-100 text-purple-700 font-semibold py-1.5">Nequi</div>
-        <div className="bg-blue-100 text-blue-700 font-semibold py-1.5">Datáfono</div>
-        <div className="bg-orange-100 text-orange-700 font-semibold py-1.5">Apps</div>
-      </div>
-      <div className="grid grid-cols-4 text-center text-xs font-semibold border-b border-neutral-200">
-        <div className="py-2 border-r border-neutral-100">{money(summary.cashSales)}</div>
-        <div className="py-2 border-r border-neutral-100">{money(summary.nequiTotal)}</div>
-        <div className="py-2 border-r border-neutral-100">{money(summary.cardTotal)}</div>
-        <div className="py-2">{money(summary.appsTotal)}</div>
-      </div>
-
-      {/* Dos tablas de desglose: Efectivo / Nequi y Datáfono */}
-      <div className="grid grid-cols-2 divide-x divide-neutral-200">
-        <div>
-          <div className="bg-green-50 text-green-700 text-xs font-semibold text-center py-1.5">Efectivo</div>
-          <SummaryRow label="Base inicial" value={summary.initialCash} />
-          <SummaryRow label="Ventas Efectivo" value={summary.cashSales} />
-          <SummaryRow label="Compras" value={summary.cashPurchases} />
-          <SummaryRow label="Gastos" value={summary.pettyCashExpenses} />
-          <SummaryRow label="Total" value={summary.systemCalculatedCash} bold />
+    <div className="space-y-3">
+      <h4 className="text-sm font-semibold text-neutral-700">Resumen del turno</h4>
+      <div ref={boxRef} className="rounded-lg overflow-hidden border border-neutral-200">
+        {/* Fila superior: total vendido por cada método de pago */}
+        <div className="grid grid-cols-4 text-center text-xs">
+          <div className="bg-green-100 text-green-700 font-semibold py-1.5">Efectivo</div>
+          <div className="bg-purple-100 text-purple-700 font-semibold py-1.5">Nequi</div>
+          <div className="bg-blue-100 text-blue-700 font-semibold py-1.5">Datáfono</div>
+          <div className="bg-orange-100 text-orange-700 font-semibold py-1.5">Apps</div>
         </div>
-        <div>
-          <div className="bg-purple-50 text-purple-700 text-xs font-semibold text-center py-1.5">
-            Nequi y Datáfono
+        <div className="grid grid-cols-4 text-center text-xs font-semibold border-b border-neutral-200">
+          <div className="py-2 border-r border-neutral-100">{money(summary.cashSales)}</div>
+          <div className="py-2 border-r border-neutral-100">{money(summary.nequiTotal)}</div>
+          <div className="py-2 border-r border-neutral-100">{money(summary.cardTotal)}</div>
+          <div className="py-2">{money(summary.appsTotal)}</div>
+        </div>
+
+        {/* Dos tablas de desglose: Efectivo / Nequi y Datáfono */}
+        <div className="grid grid-cols-2 divide-x divide-neutral-200">
+          <div>
+            <div className="bg-green-50 text-green-700 text-xs font-semibold text-center py-1.5">Efectivo</div>
+            <SummaryRow label="Base inicial" value={summary.initialCash} />
+            <SummaryRow label="Ventas Efectivo" value={summary.cashSales} />
+            <SummaryRow label="Compras" value={summary.cashPurchases} />
+            <SummaryRow label="Gastos" value={summary.pettyCashExpenses} />
+            <SummaryRow label="Total" value={summary.systemCalculatedCash} bold />
           </div>
-          <SummaryRow label="Base inicial" value={summary.initialNequi} />
-          <SummaryRow label="Ventas Cuentas" value={nequiAndCardSales} />
-          <SummaryRow label="Compras Nequi" value={0} />
-          <SummaryRow label="Gastos Nequi" value={0} />
-          <SummaryRow label="Total" value={nequiAndCardTotal} bold />
+          <div>
+            <div className="bg-purple-50 text-purple-700 text-xs font-semibold text-center py-1.5">
+              Nequi y Datáfono
+            </div>
+            <SummaryRow label="Base inicial" value={summary.initialNequi} />
+            <SummaryRow label="Ventas Cuentas" value={nequiAndCardSales} />
+            <SummaryRow label="Compras Nequi" value={0} />
+            <SummaryRow label="Gastos Nequi" value={0} />
+            <SummaryRow label="Total" value={nequiAndCardTotal} bold />
+          </div>
         </div>
       </div>
     </div>
@@ -160,6 +176,41 @@ export default function ShiftModal() {
     allResolved: false,
     corrections: [],
   });
+
+  // Altura real de la caja de `ShiftSummary` (paso CLOSE), medida en vivo
+  // con `ResizeObserver` — la caja de `StockVerificationV2` la copia
+  // (`boxHeight` prop) en vez de usar un valor fijo adivinado, para que
+  // ambas queden exactamente iguales sin importar cómo cambie el
+  // contenido de `ShiftSummary` a futuro.
+  //
+  // `summaryBoxEl` es un ref CALLBACK guardado en estado, no un
+  // `useRef` normal — necesario porque `ShiftSummary` devuelve `null`
+  // mientras `loading`/`error`/sin datos (carga async): con un `useRef`
+  // fijo, el `useEffect` de acá correría una sola vez al montar, antes
+  // de que la caja real exista en el DOM, y nunca se enteraría de que
+  // apareció después. Un ref callback SÍ se vuelve a invocar cada vez
+  // que React monta/desmonta ese nodo específico — incluida la primera
+  // vez que de verdad existe — así que guardarlo en estado dispara este
+  // efecto en el momento correcto.
+  const [summaryBoxEl, setSummaryBoxEl] = useState<HTMLDivElement | null>(null);
+  const [summaryBoxHeight, setSummaryBoxHeight] = useState<number>();
+
+  useEffect(() => {
+    if (!summaryBoxEl) return;
+    // `entry.contentRect.height` mide el content-box (excluye el borde de
+    // 1px de la caja) — pero el `boxHeight` que recibe StockVerificationV2
+    // se aplica como `style={{ height }}`, que con `box-sizing:
+    // border-box` (el reset global de Tailwind) fija el alto TOTAL con
+    // borde incluido. Usar `contentRect.height` ahí producía una caja 2px
+    // más baja que `ShiftSummary` (el borde de arriba + abajo). Medir con
+    // `getBoundingClientRect()` en su lugar da el alto real de la caja
+    // completa, con borde, que es lo que hay que igualar.
+    const observer = new ResizeObserver(() => {
+      setSummaryBoxHeight(summaryBoxEl.getBoundingClientRect().height);
+    });
+    observer.observe(summaryBoxEl);
+    return () => observer.disconnect();
+  }, [summaryBoxEl]);
 
   const canSubmitStock = v2Summary.allResolved;
 
@@ -245,7 +296,23 @@ export default function ShiftModal() {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 !m-0 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[100vh] overflow-y-auto shadow-xl">
+      <div
+        className={`relative bg-white rounded-2xl p-6 w-full max-h-[100vh] overflow-y-auto shadow-xl ${
+          step === "CLOSE" ? "max-w-3xl" : "max-w-lg"
+        }`}
+      >
+        {/* Cierre desde la esquina, en las 4 pantallas del modal (además
+            de "Cancelar" en cada una) — un solo botón fuera del switch de
+            pasos, en vez de repetirlo en cada bloque `step === "..."`. */}
+        <button
+          type="button"
+          onClick={closeModal}
+          aria-label="Cerrar"
+          className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 text-xl leading-none"
+        >
+          ✕
+        </button>
+
         {step === "CHOOSE" && (
           <>
             <h3 className="text-lg font-bold mb-4">Turno de caja</h3>
@@ -323,24 +390,30 @@ export default function ShiftModal() {
 
         {step === "CLOSE" && (
           <>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold mb-2">Cierre de turno</h3>
-              <button
-                type="button"
-                onClick={closeModal}
-                aria-label="Cerrar"
-                className="text-neutral-400 hover:text-neutral-600 text-xl leading-none"
-              >
-                ✕
-              </button>
-            </div>
+            <h3 className="text-lg font-bold mb-2">Cierre de turno</h3>
             
             <p className="text-xs text-neutral-500 mb-4">
               Revisa el resumen de tu turno, cuenta tu efectivo y saldo de cuentas físicamente,
               y regístralos abajo.
             </p>
 
-            {shiftId && <ShiftSummary shiftId={shiftId} />}
+            {/* Resumen y verificación de inventario alineados en la misma
+                fila (mismo patrón de encabezado-arriba-de-caja en ambos
+                componentes, ver ShiftSummary/StockVerificationV2 — antes
+                el resumen tenía su título DENTRO del borde y el otro
+                afuera, lo que los desalineaba visualmente aunque
+                estuvieran en la misma grilla). Los inputs de efectivo/
+                Nequi declarado quedan en su propia fila de ancho
+                completo debajo, en vez de metidos dentro de la columna
+                izquierda. `md:` es el mismo breakpoint (768px) que ya usa
+                el resto del panel para responsividad (ver punto 36 de
+                admin-frontend/CLAUDE.md) — por debajo de eso ambas cajas
+                vuelven a apilarse, aunque en la práctica un celular real
+                nunca llega a ver esto (se bloquea antes, ver punto 39). */}
+            <div className="grid md:grid-cols-2 gap-6 mb-5 items-start">
+              {shiftId && <ShiftSummary shiftId={shiftId} boxRef={setSummaryBoxEl} />}
+              <StockVerificationV2 onSummaryChange={setV2Summary} boxHeight={summaryBoxHeight} />
+            </div>
 
             <div className="grid grid-cols-2 gap-3 mb-5">
               <div>
@@ -363,10 +436,6 @@ export default function ShiftModal() {
                   placeholder="0"
                 />
               </div>
-            </div>
-
-            <div className="mb-4">
-              <StockVerificationV2 onSummaryChange={setV2Summary} />
             </div>
 
             {error && <p className="text-red-500 text-xs mb-2">{error}</p>}

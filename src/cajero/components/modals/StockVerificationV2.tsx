@@ -44,11 +44,23 @@ export interface StockVerificationV2Summary {
  * para el detalle de cómo se traduce a `stockConfirmed`/`stockAnnotation`,
  * el shape que `openShift`/`closeShift` ya esperaban en el backend, sin
  * haber tenido que cambiar esos dos endpoints).
+ *
+ * `boxHeight` (opcional, en píxeles) — cuando se pasa, fija la altura de
+ * la caja con borde a ese valor exacto (`style`, no una clase de
+ * Tailwind) en vez de usar la altura fija `h-72` de respaldo. En
+ * `ShiftModal.tsx` (paso `CLOSE`) se mide en vivo la altura real de la
+ * caja de `ShiftSummary` (con `ResizeObserver`) y se pasa acá, para que
+ * ambas cajas queden exactamente iguales sin depender de un número
+ * adivinado — ver punto 48 de CLAUDE.md. Sin este prop (ej. en el paso
+ * `OPEN`, que no tiene ninguna caja al lado con la cual alinearse), cae a
+ * `h-72`.
  */
 export default function StockVerificationV2({
   onSummaryChange,
+  boxHeight,
 }: {
   onSummaryChange?: (summary: StockVerificationV2Summary) => void;
+  boxHeight?: number;
 }) {
   const [items, setItems] = useState<StockSnapshotItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,12 +144,30 @@ export default function StockVerificationV2({
       {error && <p className="text-xs text-red-500">{error}</p>}
 
       {!loading && !error && (
-        <div className="border border-neutral-200 rounded-lg overflow-hidden">
-          {/* Altura FIJA (no `max-h-*`) — a propósito, para que el modal no
-              cambie de tamaño según cuántos productos tenga la sede; con
-              pocos productos queda espacio vacío abajo, con muchos aparece
-              el scroll interno, pero el modal alrededor siempre mide igual. */}
-          <div className="h-56 overflow-y-auto">
+        <div
+          className="h-72 border border-neutral-200 rounded-lg overflow-hidden flex flex-col"
+          style={boxHeight ? { height: boxHeight } : undefined}
+        >
+          {/* Altura FIJA — igual a la de la caja de `ShiftSummary` al
+              lado en ShiftModal.tsx, medida en vivo y pasada acá como
+              `boxHeight` (`style`, gana sobre la clase `h-72` de
+              respaldo) en vez de un `flex-1` estirado por el grid: un
+              hijo `flex-1`/`min-h-0` dentro de una fila de grid con alto
+              `auto` NO tiene ningún límite real — `items-stretch` solo
+              empareja las dos cajas entre sí, pero si el contenido de
+              CUALQUIERA de las dos crece, la fila entera crece con él —
+              con muchos productos, esta caja terminaba creciendo en vez
+              de scrollear, y `ShiftSummary` crecía exactamente igual a su
+              lado (mismo alto, pero ninguno de los dos limitado de
+              verdad). Con una altura explícita no hay ninguna ambigüedad:
+              `min-h-0` en el hijo flex sigue siendo necesario para que
+              `overflow-y-auto` funcione de verdad (un hijo flex no se
+              encoge debajo del alto de su contenido por defecto,
+              `min-height: auto` — mismo gotcha que el `min-w-0` de las
+              pestañas de categoría en `CategoryMenu.tsx`, ver punto 46),
+              pero ahora tiene un padre con alto real contra el cual
+              encogerse. */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
             <table className="w-full text-xs">
               <thead className="bg-neutral-50 sticky top-0">
                 <tr className="text-left text-neutral-500">
