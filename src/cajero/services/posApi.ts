@@ -30,6 +30,12 @@ export const posApi = {
   // total), para la verificación de stock al abrir/cerrar turno.
   getStockSnapshot: () => posHttp.get("/stock-snapshot").then((r) => r.data),
 
+  // Corrige ProductStock.quantity al valor contado físicamente (fija el
+  // valor, no aplica un delta) — usado por StockVerificationV2.tsx, ver
+  // punto 47 de CLAUDE.md.
+  adjustStockCount: (productId: string, quantity: number) =>
+    posHttp.post("/stock-snapshot/adjust", { productId, quantity }).then((r) => r.data),
+
   // Id del turno OPEN del cajero (o null) — fuente de verdad server-side,
   // usada por Caja.tsx para bloquear la pantalla hasta que abra un turno.
   getCurrentShift: (): Promise<{ shiftId: string | null }> =>

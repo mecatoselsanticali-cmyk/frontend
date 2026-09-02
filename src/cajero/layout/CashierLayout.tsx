@@ -1,5 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { usePosStore } from "../store/posStore";
 import { posApi } from "../services/posApi";
 import { syncPendingSales } from "../services/syncService";
@@ -169,6 +171,8 @@ export default function CashierLayout() {
       </main>
 
       {activeModal === "SHIFT" && <ShiftModal />}
+
+      <ToastContainer position="top-center" autoClose={2500} theme="light" />
     </div>
   );
 }

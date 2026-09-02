@@ -1,143 +1,10 @@
 import { useEffect, useState } from "react";
+import { toast } from "react-toastify";
 import { usePosStore } from "../../store/posStore";
 import { posApi } from "../../services/posApi";
+import StockVerificationV2, { type StockVerificationV2Summary } from "./StockVerificationV2";
 
 type Step = "CHOOSE" | "OPEN" | "CLOSE" | "RESULT";
-
-interface StockSnapshotItem {
-  sku: string;
-  name: string;
-  price: number;
-  quantity: number;
-  totalValue: number;
-}
-
-/**
- * Tabla de stock actual + confirmación, reutilizada tanto en apertura como
- * en cierre de turno (mismo modal en ambos casos, ver CLAUDE.md) — el
- * cajero cuenta físicamente el inventario y o bien confirma que coincide,
- * o marca que no y describe la diferencia en una anotación. El snapshot
- * que ve acá es el mismo que el backend vuelve a calcular y guarda al
- * confirmar (no se manda de vuelta al servidor, solo el resultado de la
- * verificación).
- */
-function StockVerification({
-  confirmed,
-  onConfirmedChange,
-  annotation,
-  onAnnotationChange,
-}: {
-  confirmed: boolean | null;
-  onConfirmedChange: (v: boolean) => void;
-  annotation: string;
-  onAnnotationChange: (v: string) => void;
-}) {
-  const [items, setItems] = useState<StockSnapshotItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    posApi
-      .getStockSnapshot()
-      .then(setItems)
-      .catch((err: any) => setError(err.message || "No se pudo cargar el stock"))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const total = items.reduce((acc, it) => acc + it.totalValue, 0);
-
-  return (
-    <div className="space-y-3">
-      <h4 className="text-sm font-semibold text-neutral-700">Verificación de stock</h4>
-
-      {loading && <p className="text-xs text-neutral-400">Cargando stock...</p>}
-      {error && <p className="text-xs text-red-500">{error}</p>}
-
-      {!loading && !error && (
-        <div className="border border-neutral-200 rounded-lg overflow-hidden">
-          <div className="max-h-48 overflow-y-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-neutral-50 sticky top-0">
-                <tr className="text-left text-neutral-500">
-                  <th className="p-2 font-medium">SKU</th>
-                  <th className="p-2 font-medium">Producto</th>
-                  <th className="p-2 font-medium text-right">Precio</th>
-                  <th className="p-2 font-medium text-right">Cant.</th>
-                  <th className="p-2 font-medium text-right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr key={it.sku} className="border-t border-neutral-100">
-                    <td className="p-2 text-neutral-500">{it.sku}</td>
-                    <td className="p-2">{it.name}</td>
-                    <td className="p-2 text-right">${it.price.toLocaleString("es-CO")}</td>
-                    <td className="p-2 text-right">{it.quantity}</td>
-                    <td className="p-2 text-right font-medium">
-                      ${it.totalValue.toLocaleString("es-CO")}
-                    </td>
-                  </tr>
-                ))}
-                {items.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="p-3 text-center text-neutral-400">
-                      No hay stock registrado en esta sede
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-between items-center bg-neutral-50 border-t border-neutral-200 p-2 text-xs font-semibold">
-            <span>Valor total del inventario</span>
-            <span>${total.toLocaleString("es-CO")}</span>
-          </div>
-        </div>
-      )}
-
-      <div>
-        <p className="text-xs text-neutral-500 mb-1.5">¿El stock físico coincide con esta tabla?</p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onConfirmedChange(true)}
-            className={`flex-1 rounded-lg py-2 text-xs font-medium border-2 transition-colors ${
-              confirmed === true
-                ? "border-green-500 bg-green-50 text-green-700"
-                : "border-neutral-200 bg-white text-neutral-600"
-            }`}
-          >
-            Sí, coincide
-          </button>
-          <button
-            type="button"
-            onClick={() => onConfirmedChange(false)}
-            className={`flex-1 rounded-lg py-2 text-xs font-medium border-2 transition-colors ${
-              confirmed === false
-                ? "border-amber-500 bg-amber-50 text-amber-700"
-                : "border-neutral-200 bg-white text-neutral-600"
-            }`}
-          >
-            No, hay diferencia
-          </button>
-        </div>
-      </div>
-
-      {confirmed === false && (
-        <div>
-          <label className="text-xs text-neutral-500">Describe la diferencia encontrada</label>
-          <textarea
-            value={annotation}
-            onChange={(e) => onAnnotationChange(e.target.value)}
-            className="w-full mt-1 border border-neutral-200 rounded-lg p-2 text-sm"
-            rows={2}
-            placeholder="Ej. Faltan 3 unidades de Empanada Grande"
-          />
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface ShiftSummaryData {
   initialCash: number;
@@ -147,8 +14,29 @@ interface ShiftSummaryData {
   nequiTotal: number;
   appsTotal: number;
   pettyCashExpenses: number;
+  cashPurchases: number;
   systemCalculatedCash: number;
   systemCalculatedNequi: number;
+}
+
+function money(n: number) {
+  return `$${n.toLocaleString("es-CO")}`;
+}
+
+/** Una fila de una de las dos tablas de desglose (Efectivo / Nequi y Datáfono) — ver `ShiftSummary`. */
+function SummaryRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
+  return (
+    <div
+      className={`flex justify-between px-3 py-1.5 text-xs border-t border-neutral-100 ${
+        bold ? "font-bold" : "text-neutral-600"
+      }`}
+    >
+      <span>{label}</span>
+      <span className={bold ? (value < 0 ? "text-red-600" : "text-neutral-800") : undefined}>
+        {money(value)}
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -160,6 +48,14 @@ interface ShiftSummaryData {
  * hace `closeShift` al cerrar de verdad (`computeShiftFinancials` en el
  * backend), así que el número que ve acá el cajero es exactamente el que
  * se usará para calcular la diferencia al confirmar.
+ *
+ * Rediseñado como una tabla tipo hoja de cálculo (ver punto 48 de
+ * CLAUDE.md) — fila superior con el total vendido por cada método de
+ * pago, y debajo dos columnas de desglose: Efectivo (única con
+ * Compras/Gastos, porque son los únicos movimientos que de verdad salen
+ * de la gaveta física) y Nequi y Datáfono combinados (informativo — el
+ * "Total" de esta columna NO es lo que el cajero declara al cerrar, ver
+ * la nota en el JSX de abajo).
  */
 function ShiftSummary({ shiftId }: { shiftId: string }) {
   const [summary, setSummary] = useState<ShiftSummaryData | null>(null);
@@ -178,47 +74,60 @@ function ShiftSummary({ shiftId }: { shiftId: string }) {
   if (error) return <p className="text-xs text-red-500 mb-4">{error}</p>;
   if (!summary) return null;
 
+  // "Nequi y Datáfono" es una columna puramente informativa (ver el
+  // comentario de arriba de la función) — combina lo vendido por ambos
+  // medios electrónicos para que el cajero/admin vea el total digital de
+  // un vistazo, pero el campo que el cajero realmente declara al cerrar
+  // (`declaredNequi`, más abajo en este mismo modal) y la diferencia que
+  // calcula el backend (`systemCalculatedNequi`) siguen siendo SOLO
+  // Nequi — el dinero de una venta con datáfono nunca entra al saldo de
+  // la app Nequi, así que sumarlo ahí generaría una diferencia que el
+  // cajero jamás podría cuadrar. "Compras Nequi"/"Gastos Nequi" quedan en
+  // $0 siempre en este sistema (las compras y los gastos de caja menor
+  // del cajero solo existen en efectivo, ver `computeShiftFinancials` en
+  // el backend) — se muestran igual, en vez de omitirse, para que la
+  // tabla quede simétrica con la de Efectivo.
+  const nequiAndCardSales = summary.nequiTotal + summary.cardTotal;
+  const nequiAndCardTotal = summary.initialNequi + nequiAndCardSales;
+
   return (
-    <div className="border border-neutral-200 rounded-lg p-3 space-y-3 mb-5">
-      <h4 className="text-sm font-semibold text-neutral-700">Resumen del turno</h4>
+    <div className="rounded-lg overflow-hidden border border-neutral-200 mb-5">
+      <h4 className="text-sm font-semibold text-neutral-700 px-3 pt-3 pb-2">Resumen del turno</h4>
 
-      <div className="space-y-1 text-xs">
-        <div className="flex justify-between">
-          <span className="text-neutral-500">Base inicial en efectivo</span>
-          <span>${summary.initialCash.toLocaleString("es-CO")}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500">+ Ventas en efectivo</span>
-          <span>${summary.cashSales.toLocaleString("es-CO")}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500">- Gastos de caja menor</span>
-          <span>${summary.pettyCashExpenses.toLocaleString("es-CO")}</span>
-        </div>
-        <div className="flex justify-between font-bold border-t border-neutral-100 pt-1">
-          <span>= Efectivo esperado</span>
-          <span>${summary.systemCalculatedCash.toLocaleString("es-CO")}</span>
-        </div>
+      {/* Fila superior: total vendido por cada método de pago */}
+      <div className="grid grid-cols-4 text-center text-xs border-t border-neutral-200">
+        <div className="bg-green-100 text-green-700 font-semibold py-1.5">Efectivo</div>
+        <div className="bg-purple-100 text-purple-700 font-semibold py-1.5">Nequi</div>
+        <div className="bg-blue-100 text-blue-700 font-semibold py-1.5">Datáfono</div>
+        <div className="bg-orange-100 text-orange-700 font-semibold py-1.5">Apps</div>
+      </div>
+      <div className="grid grid-cols-4 text-center text-xs font-semibold border-b border-neutral-200">
+        <div className="py-2 border-r border-neutral-100">{money(summary.cashSales)}</div>
+        <div className="py-2 border-r border-neutral-100">{money(summary.nequiTotal)}</div>
+        <div className="py-2 border-r border-neutral-100">{money(summary.cardTotal)}</div>
+        <div className="py-2">{money(summary.appsTotal)}</div>
       </div>
 
-      <div className="space-y-1 text-xs pt-1 border-t border-neutral-100">
-        <div className="flex justify-between">
-          <span className="text-neutral-500">Base inicial en Nequi</span>
-          <span>${summary.initialNequi.toLocaleString("es-CO")}</span>
+      {/* Dos tablas de desglose: Efectivo / Nequi y Datáfono */}
+      <div className="grid grid-cols-2 divide-x divide-neutral-200">
+        <div>
+          <div className="bg-green-50 text-green-700 text-xs font-semibold text-center py-1.5">Efectivo</div>
+          <SummaryRow label="Base inicial" value={summary.initialCash} />
+          <SummaryRow label="Ventas Efectivo" value={summary.cashSales} />
+          <SummaryRow label="Compras" value={summary.cashPurchases} />
+          <SummaryRow label="Gastos" value={summary.pettyCashExpenses} />
+          <SummaryRow label="Total" value={summary.systemCalculatedCash} bold />
         </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500">+ Ventas en Nequi</span>
-          <span>${summary.nequiTotal.toLocaleString("es-CO")}</span>
+        <div>
+          <div className="bg-purple-50 text-purple-700 text-xs font-semibold text-center py-1.5">
+            Nequi y Datáfono
+          </div>
+          <SummaryRow label="Base inicial" value={summary.initialNequi} />
+          <SummaryRow label="Ventas Cuentas" value={nequiAndCardSales} />
+          <SummaryRow label="Compras Nequi" value={0} />
+          <SummaryRow label="Gastos Nequi" value={0} />
+          <SummaryRow label="Total" value={nequiAndCardTotal} bold />
         </div>
-        <div className="flex justify-between font-bold border-t border-neutral-100 pt-1">
-          <span>= Nequi esperado</span>
-          <span>${summary.systemCalculatedNequi.toLocaleString("es-CO")}</span>
-        </div>
-      </div>
-
-      <div className="flex justify-between text-xs pt-1 border-t border-neutral-100 text-neutral-500">
-        <span>Ventas tarjeta: ${summary.cardTotal.toLocaleString("es-CO")}</span>
-        <span>Ventas apps: ${summary.appsTotal.toLocaleString("es-CO")}</span>
       </div>
     </div>
   );
@@ -243,13 +152,33 @@ export default function ShiftModal() {
   const [initialNequi, setInitialNequi] = useState("");
   const [declaredCash, setDeclaredCash] = useState("");
   const [declaredNequi, setDeclaredNequi] = useState("");
-  const [stockConfirmed, setStockConfirmed] = useState<boolean | null>(null);
-  const [stockAnnotation, setStockAnnotation] = useState("");
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const canSubmitStock = stockConfirmed === true || (stockConfirmed === false && Boolean(stockAnnotation));
+  const [v2Summary, setV2Summary] = useState<StockVerificationV2Summary>({
+    allResolved: false,
+    corrections: [],
+  });
+
+  const canSubmitStock = v2Summary.allResolved;
+
+  // Traduce el resultado de `StockVerificationV2` (confirmar/corregir por
+  // fila, sin un "confirmado"/"anotación" global) al shape que
+  // `openShift`/`closeShift` ya esperaban (`stockConfirmed`/
+  // `stockAnnotation`) — esos dos endpoints no cambiaron. Si ninguna fila
+  // se corrigió, se manda `stockConfirmed: true` (coincide todo); si al
+  // menos una se corrigió, `stockConfirmed: false` con una anotación
+  // generada a partir de esas correcciones.
+  const buildStockPayload = (): { stockConfirmed: boolean; stockAnnotation?: string } => {
+    if (v2Summary.corrections.length === 0) {
+      return { stockConfirmed: true };
+    }
+    const annotation = `Verificación por fila: ${v2Summary.corrections
+      .map((c) => `${c.name} (${c.sku}) → ${c.quantity} uds`)
+      .join("; ")}`;
+    return { stockConfirmed: false, stockAnnotation: annotation };
+  };
 
   const openShift = async () => {
     if (!canSubmitStock) return;
@@ -259,8 +188,7 @@ export default function ShiftModal() {
       const shift = await posApi.openShift({
         initialCash: Number(initialCash) || 0,
         initialNequi: Number(initialNequi) || 0,
-        stockConfirmed: Boolean(stockConfirmed),
-        stockAnnotation: stockAnnotation || undefined,
+        ...buildStockPayload(),
       });
       setShiftId(shift._id);
       closeModal();
@@ -280,12 +208,12 @@ export default function ShiftModal() {
         declaredCash: Number(declaredCash) || 0,
         declaredNequi: Number(declaredNequi) || 0,
         reportType,
-        stockConfirmed: Boolean(stockConfirmed),
-        stockAnnotation: stockAnnotation || undefined,
+        ...buildStockPayload(),
       });
       setResult(res);
       if (reportType === "Z") {
         setShiftId(null);
+        toast.success("Turno cerrado correctamente");
       }
       setStep("RESULT");
     } catch (err: any) {
@@ -310,15 +238,14 @@ export default function ShiftModal() {
   };
 
   const goToStep = (next: Step) => {
-    setStockConfirmed(null);
-    setStockAnnotation("");
+    setV2Summary({ allResolved: false, corrections: [] });
     setError("");
     setStep(next);
   };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 !m-0 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[100vh] overflow-y-auto shadow-xl">
         {step === "CHOOSE" && (
           <>
             <h3 className="text-lg font-bold mb-4">Turno de caja</h3>
@@ -337,7 +264,7 @@ export default function ShiftModal() {
                   onClick={() => goToStep("CLOSE")}
                   className="bg-brand-600 text-white rounded-lg py-3 text-sm font-medium"
                 >
-                  Cerrar turno / Arqueo
+                  Cerrar turno 
                 </button>
               )}
               <button onClick={closeModal} className="bg-neutral-100 rounded-lg py-2 text-sm">
@@ -375,12 +302,7 @@ export default function ShiftModal() {
             </div>
 
             <div className="mb-4">
-              <StockVerification
-                confirmed={stockConfirmed}
-                onConfirmedChange={setStockConfirmed}
-                annotation={stockAnnotation}
-                onAnnotationChange={setStockAnnotation}
-              />
+              <StockVerificationV2 onSummaryChange={setV2Summary} />
             </div>
 
             {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
@@ -401,7 +323,18 @@ export default function ShiftModal() {
 
         {step === "CLOSE" && (
           <>
-            <h3 className="text-lg font-bold mb-2">Cierre de turno / Arqueo</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold mb-2">Cierre de turno</h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                aria-label="Cerrar"
+                className="text-neutral-400 hover:text-neutral-600 text-xl leading-none"
+              >
+                ✕
+              </button>
+            </div>
+            
             <p className="text-xs text-neutral-500 mb-4">
               Revisa el resumen de tu turno, cuenta tu efectivo y saldo de cuentas físicamente,
               y regístralos abajo.
@@ -433,34 +366,22 @@ export default function ShiftModal() {
             </div>
 
             <div className="mb-4">
-              <StockVerification
-                confirmed={stockConfirmed}
-                onConfirmedChange={setStockConfirmed}
-                annotation={stockAnnotation}
-                onAnnotationChange={setStockAnnotation}
-              />
+              <StockVerificationV2 onSummaryChange={setV2Summary} />
             </div>
 
             {error && <p className="text-red-500 text-xs mb-2">{error}</p>}
-            <div className="flex gap-2 mb-2">
-              <button
-                onClick={() => closeShift("X")}
-                disabled={loading || !canSubmitStock}
-                className="flex-1 bg-neutral-100 rounded-lg py-2 text-sm disabled:opacity-50"
-              >
-                Reporte X (parcial)
+            <div className="flex gap-2">
+              <button onClick={closeModal} className="flex-1 bg-neutral-100 rounded-lg py-2 text-sm">
+                Cancelar
               </button>
               <button
                 onClick={() => closeShift("Z")}
                 disabled={loading || !canSubmitStock}
                 className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm disabled:opacity-50"
               >
-                Reporte Z (cierre)
+                Cerrar turno
               </button>
             </div>
-            <button onClick={closeModal} className="w-full bg-neutral-50 rounded-lg py-2 text-xs">
-              Cancelar
-            </button>
           </>
         )}
 
@@ -501,7 +422,7 @@ export default function ShiftModal() {
             </div>
             {result.shift.closingStockVerification?.confirmed === false && (
               <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg p-3 mb-4">
-                <strong>Diferencia de stock reportada:</strong>{" "}
+                <strong>Diferencia de inventario reportada:</strong>{" "}
                 {result.shift.closingStockVerification.annotation}
               </div>
             )}
