@@ -75,15 +75,22 @@ export default function StockVerificationV2({
   // sin necesitar estar en el arreglo de dependencias.
   useEffect(() => {
     if (!onSummaryChange) return;
+    // Sin productos en stock no hay nada que verificar — no debería
+    // bloquear la apertura/cierre de turno solo porque la sede no tiene
+    // inventario cargado todavía. `!loading` evita reportar `true` en el
+    // instante inicial (antes de que `getStockSnapshot()` responda),
+    // donde `items` también empieza en `[]` y se vería igual de "vacío"
+    // sin serlo todavía.
     const allResolved =
-      items.length > 0 &&
-      items.every((it) => (statusByProduct[it.productId] || "PENDING") !== "PENDING");
+      !loading &&
+      (items.length === 0 ||
+        items.every((it) => (statusByProduct[it.productId] || "PENDING") !== "PENDING"));
     const corrections = items
       .filter((it) => statusByProduct[it.productId] === "CORRECTED")
       .map((it) => ({ sku: it.sku, name: it.name, quantity: it.quantity }));
     onSummaryChange({ allResolved, corrections });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, statusByProduct]);
+  }, [items, statusByProduct, loading]);
 
   const confirmRow = (productId: string) => {
     setEditingProduct((prev) => (prev === productId ? null : prev));
