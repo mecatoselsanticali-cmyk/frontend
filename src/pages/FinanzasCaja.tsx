@@ -4,6 +4,7 @@ import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
 import FinanzasTabs from "../components/FinanzasTabs";
 import CashClosureModal from "../components/CashClosureModal";
+import CashClosureDetailModal from "../components/CashClosureDetailModal";
 import ActionsMenu from "../components/ActionsMenu";
 import { formatDateTime } from "../utils/timezone";
 
@@ -15,6 +16,7 @@ export default function FinanzasCaja() {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClosure, setEditingClosure] = useState<any>(null);
+  const [viewingClosureId, setViewingClosureId] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [cashierId, setCashierId] = useState("");
   const [cashierOptions, setCashierOptions] = useState<any[]>([]);
@@ -201,6 +203,7 @@ export default function FinanzasCaja() {
                     <div className="flex justify-center">
                       <ActionsMenu
                         items={[
+                          { label: "Ver", onClick: () => setViewingClosureId(c._id) },
                           { label: "Editar", onClick: () => openEdit(c) },
                           { label: "Eliminar", danger: true, onClick: () => handleDelete(c) },
                         ]}
@@ -245,6 +248,10 @@ export default function FinanzasCaja() {
           onClose={() => setModalOpen(false)}
           onSaved={load}
         />
+      )}
+
+      {viewingClosureId && (
+        <CashClosureDetailModal closureId={viewingClosureId} onClose={() => setViewingClosureId(null)} />
       )}
     </div>
   );

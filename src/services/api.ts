@@ -174,6 +174,10 @@ export const adminApi = {
   }) => adminHttp.get("/cash-closures", { params }).then((r) => r.data),
   listCashiersForClosures: (branchId?: string) =>
     adminHttp.get("/cash-closures/cashiers", { params: { branchId } }).then((r) => r.data),
+  // Detalle de un turno para el botón "Ver" de FinanzasCaja.tsx — apertura/
+  // cierre reales, verificación de inventario (con snapshot completo) y
+  // ventas por método de pago, ver punto 51 de admin-frontend/CLAUDE.md.
+  getCashClosureDetail: (id: string) => adminHttp.get(`/cash-closures/${id}/detail`).then((r) => r.data),
   createCashClosure: (data: any) => adminHttp.post("/cash-closures", data).then((r) => r.data),
   updateCashClosure: (id: string, data: any) =>
     adminHttp.put(`/cash-closures/${id}`, data).then((r) => r.data),
