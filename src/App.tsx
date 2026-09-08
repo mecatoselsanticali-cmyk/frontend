@@ -68,7 +68,7 @@ function RootRedirect() {
 function RouteLoadingFallback() {
   return (
     <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
-      Cargando...
+      <LogoLoader text="Cargando..." />
     </div>
   );
 }
