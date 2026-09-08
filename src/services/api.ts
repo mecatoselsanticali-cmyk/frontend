@@ -89,6 +89,7 @@ export const adminApi = {
     orderType?: string;
     category?: string;
     paymentMethod?: string;
+    paymentStatus?: string;
     cashierId?: string;
     search?: string;
     from?: string;
@@ -114,8 +115,14 @@ export const adminApi = {
     }
   ) => adminHttp.put(`/sales/${id}`, data).then((r) => r.data),
   cancelSale: (id: string) => adminHttp.post(`/sales/${id}/cancel`).then((r) => r.data),
-  confirmSalePayment: (id: string) =>
-    adminHttp.patch(`/sales/${id}/confirm-payment`).then((r) => r.data),
+  confirmSalePayment: (id: string, settlementReference?: string) =>
+    adminHttp.patch(`/sales/${id}/confirm-payment`, { settlementReference }).then((r) => r.data),
+  // Confirmación en bloque — miércoles de liquidación DiDi/Rappi, ver punto
+  // 52 de admin-frontend/CLAUDE.md. Devuelve { confirmed: string[], skipped:
+  // {id, reason}[] } — no todo lo pedido necesariamente se confirma (otro
+  // admin pudo haberlo confirmado o cancelado justo antes).
+  confirmSalePaymentBulk: (data: { saleIds: string[]; settlementReference?: string }) =>
+    adminHttp.patch("/sales/confirm-payment-bulk", data).then((r) => r.data),
 
   listPayables: (params?: Record<string, string>) =>
     adminHttp.get("/accounts-payable", { params }).then((r) => r.data),

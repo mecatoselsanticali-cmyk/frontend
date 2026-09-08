@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
@@ -6,7 +6,8 @@ import SaleModal from "../components/SaleModal";
 import SaleEditModal from "../components/SaleEditModal";
 import SaleReceipt from "../components/SaleReceipt";
 import ActionsMenu from "../components/ActionsMenu";
-import { formatDateTime } from "../utils/timezone";
+import PendingDidiPaymentsModal from "../components/PendingDidiPaymentsModal";
+import { formatDateTime, todayColombia, dayOfWeekForDateString } from "../utils/timezone";
 
 const statusColors: Record<string, string> = {
   PENDING: "bg-amber-50 text-amber-600",
@@ -49,10 +50,24 @@ export default function Ventas() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSale, setEditingSale] = useState<any>(null);
   const [viewingSale, setViewingSale] = useState<any>(null);
+  // Modal de "pendientes DiDi/Rappi" (ver punto 53 de CLAUDE.md) — abre
+  // desde el botón del mismo nombre, desde "Ver pendientes" del banner de
+  // miércoles, o automáticamente ese mismo día (ver el `useEffect` de más
+  // abajo). Reemplazó al diseño anterior de checkboxes sueltos en esta
+  // tabla + un filtro que la forzaba a solo DELIVERY_APP pendientes —
+  // pedido explícito de sacar eso de acá, se veía recargado.
+  const [pendingModalOpen, setPendingModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  // Cuenta GLOBAL de ventas DiDi/Rappi pendientes (para el banner de
+  // miércoles) — independiente de `total`, que es el conteo de la tabla
+  // bajo los filtros que el admin tenga elegidos en este momento. Se
+  // refresca junto con `load()` (mismo `.finally`), así que cualquier
+  // confirmación (individual o en bloque) la deja al día sin necesitar su
+  // propio efecto aparte.
+  const [pendingDidiCount, setPendingDidiCount] = useState(0);
   const pageSize = 12;
 
   const load = () => {
@@ -80,6 +95,20 @@ export default function Ventas() {
         if (res.page > res.totalPages) setPage(res.totalPages);
       })
       .finally(() => setLoading(false));
+
+    // Conteo global para el banner de miércoles (ver `pendingDidiCount`
+    // arriba) — solo depende de la sede, no de los demás filtros de la
+    // tabla; `pageSize: 1` porque solo hace falta `res.total`, no las filas.
+    adminApi
+      .listSales({
+        branchId: selectedBranch || undefined,
+        paymentMethod: "DELIVERY_APP",
+        paymentStatus: "PENDING_PAYMENT",
+        page: 1,
+        pageSize: 1,
+      })
+      .then((res) => setPendingDidiCount(res.total))
+      .catch(() => setPendingDidiCount(0));
   };
 
   useEffect(load, [selectedBranch, dianStatus, category, paymentMethod, cashierId, search, date, page]);
@@ -149,8 +178,55 @@ export default function Ventas() {
     }
   };
 
+  // Banner de recordatorio los miércoles (liquidación DiDi/Rappi semanal,
+  // ver punto 53 de CLAUDE.md) — `dayOfWeekForDateString(todayColombia())`
+  // en vez de `new Date().getDay()` a secas, para no depender de la zona
+  // horaria del navegador de quien esté viendo el panel (mismo principio
+  // que el resto del proyecto, ver punto 33 de CLAUDE.md raíz). Solo se
+  // muestra si además hay ventas DiDi/Rappi realmente pendientes — un
+  // miércoles con la cola en $0 no necesita el recordatorio. La cuenta es
+  // GLOBAL (ver `pendingDidiCount` más arriba), no la de `total` de la
+  // tabla — si el admin está viendo otro filtro (otra categoría, otro
+  // método de pago), la tabla en pantalla puede mostrar 0 aunque sí haya
+  // ventas pendientes en otro filtro; el banner no debería depender de eso.
+  const isWednesdayInBogota = dayOfWeekForDateString(todayColombia()) === 3;
+  const showWednesdayBanner = isWednesdayInBogota && pendingDidiCount > 0;
+
+  // Apertura AUTOMÁTICA del modal de pendientes los miércoles, una sola
+  // vez por visita a esta página — no cada vez que `pendingDidiCount` se
+  // refresca (ej. después de que el admin confirme algunas y cierre el
+  // modal, no debería reabrirse solo por eso). El guard vive en un
+  // `useRef`, no en `useState`, justamente para que cambiar su valor NO
+  // dispare un re-render/re-ejecución del efecto.
+  const autoPromptedRef = useRef(false);
+  useEffect(() => {
+    if (autoPromptedRef.current) return;
+    if (isWednesdayInBogota && pendingDidiCount > 0) {
+      autoPromptedRef.current = true;
+      setPendingModalOpen(true);
+    }
+  }, [isWednesdayInBogota, pendingDidiCount]);
+
   return (
     <div className="space-y-4">
+      {showWednesdayBanner && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 flex items-center justify-between gap-3 text-sm">
+          <span>
+            <strong>Es miércoles de liquidación DiDi.</strong> Revisa tu extracto bancario y confirma el
+            depósito — hay {pendingDidiCount} venta{pendingDidiCount === 1 ? "" : "s"} pendiente
+            {pendingDidiCount === 1 ? "" : "s"}.
+          </span>
+          {!pendingModalOpen && (
+            <button
+              onClick={() => setPendingModalOpen(true)}
+              className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg"
+            >
+              Ver pendientes
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
         {categoryTabs.map((tab) => (
           <button
@@ -205,6 +281,16 @@ export default function Ventas() {
               </option>
             ))}
           </select>
+          {/* Abre el modal dedicado de pendientes DiDi/Rappi (ver punto 53
+              de CLAUDE.md) — ya no es un filtro que reescribe esta tabla,
+              es una acción que abre `PendingDidiPaymentsModal` con su
+              propia lista/selección/confirmación. */}
+          <button
+            onClick={() => setPendingModalOpen(true)}
+            className="px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+          >
+            Pendientes DiDi/Rappi
+          </button>
           <select
             value={dianStatus}
             onChange={(e) => setDianStatus(e.target.value)}
@@ -387,6 +473,14 @@ export default function Ventas() {
 
       {viewingSale && (
         <SaleReceipt sale={viewingSale} onClose={() => setViewingSale(null)} />
+      )}
+
+      {pendingModalOpen && (
+        <PendingDidiPaymentsModal
+          branchId={selectedBranch || undefined}
+          onClose={() => setPendingModalOpen(false)}
+          onConfirmed={load}
+        />
       )}
     </div>
   );

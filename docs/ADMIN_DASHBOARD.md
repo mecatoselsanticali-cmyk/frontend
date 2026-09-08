@@ -146,7 +146,10 @@ The layout follows a 2-row grid structure emulating Siigo POS:
     "ivaTotal": 18441.09,
     "netTotal": 1186919.50,
     "averageTicket": 7023.67,
-    "totalTransactions": 169
+    "totalTransactions": 169,
+    "totalPurchases": 120000,
+    "totalExpenses": 45000,
+    "profitability": 1021919.50
   },
   "salesByHour": [
     { "hour": "05:00", "total": 0 },
@@ -184,3 +187,27 @@ The layout follows a 2-row grid structure emulating Siigo POS:
 ```
 
 ```
+
+---
+
+## 6. Actualización — fila de KPIs Ventas/Compras/Gastos/Rentabilidad
+
+Agregada arriba del Widget 1/2 (ver punto 54 de `admin-frontend/CLAUDE.md`
+para el detalle de implementación): 4 tarjetas simples (`StatCard` en
+`Dashboard.tsx`, sin gráfico), mismo rango de fechas/sede que el resto del
+dashboard.
+
+* **Ventas** — `summary.netTotal` (ya existía en la respuesta, reutilizado
+  tal cual — es el mismo total que ya se mostraba como "Total neto" en el
+  widget de Ticket promedio).
+* **Compras** — `summary.totalPurchases`, nuevo campo (suma de
+  `Purchase.amount` del rango/sede vía `Purchase.aggregate`).
+* **Gastos** — `summary.totalExpenses`, nuevo campo (ya se calculaba
+  internamente para las `percentage` de `expensesByCategory`, ahora
+  también se devuelve como total).
+* **Rentabilidad** — `summary.profitability` = `netTotal - totalPurchases
+  - totalExpenses`, nuevo campo. No es utilidad contable formal (no
+  descuenta costo de mercancía vendida — el kardex/BOM sigue sin
+  implementar, ver "Pendiente conocido" en el `CLAUDE.md` raíz). Puede dar
+  negativo; la tarjeta lo muestra en rojo con el signo antes del `$`
+  (`text-red-500`, `-$50.000`) en vez de verde (`text-green-600`).

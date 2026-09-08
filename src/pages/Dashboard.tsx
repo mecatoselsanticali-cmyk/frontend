@@ -74,6 +74,18 @@ const presetLabels: { value: DatePreset; label: string }[] = [
   { value: "custom", label: "Rango personalizado" },
 ];
 
+// Tarjeta de KPI simple (Ventas/Compras/Gastos/Rentabilidad) — mismo
+// patrón visual (`bg-white rounded-xl border`) que el resto de widgets de
+// este dashboard, pero sin gráfico: solo una etiqueta y un monto grande.
+function StatCard({ label, value, valueClassName = "text-neutral-800" }: { label: string; value: string; valueClassName?: string }) {
+  return (
+    <div className="bg-white rounded-xl border border-neutral-100 p-5">
+      <h3 className="text-sm text-neutral-500 mb-1">{label}</h3>
+      <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
+    </div>
+  );
+}
+
 function SkeletonCard({ className = "" }: { className?: string }) {
   return (
     <div className={`bg-white rounded-xl border border-neutral-100 p-5 animate-pulse ${className}`}>
@@ -388,6 +400,25 @@ export default function Dashboard() {
     </div>
   );
 
+  // Resumen Ventas/Compras/Gastos/Rentabilidad — mismo rango de fechas y
+  // sede que el resto del dashboard (viene todo de `summary`, ya filtrado
+  // por el backend). Rentabilidad = ventas - compras - gastos, ver punto
+  // 54 de CLAUDE.md; puede dar negativo (sede con más gasto que venta en
+  // el rango elegido), de ahí el color condicional.
+  const profitability = summary?.profitability ?? 0;
+  const statsWidget = (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <StatCard label="Ventas" value={money(summary?.netTotal || 0)} />
+      <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} />
+      <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} />
+      <StatCard
+        label="Rentabilidad"
+        value={profitability < 0 ? `-${money(Math.abs(profitability))}` : money(profitability)}
+        valueClassName={profitability < 0 ? "text-red-500" : "text-green-600"}
+      />
+    </div>
+  );
+
   const averageTicketWidget = (
     <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
       <h3 className="font-semibold text-neutral-700 mb-1">Ticket promedio</h3>
@@ -463,37 +494,51 @@ export default function Dashboard() {
       </div>
 
       {loading ? (
-        isMobile ? (
-          <div className="space-y-4">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-4">
-            <SkeletonCard className="col-span-2" />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-        )
-      ) : isMobile ? (
-        // Móvil: la venta por hora/día va arriba a ancho completo, y los
-        // otros 4 widgets se agrupan en 2 carruseles de a 2 para no apilar
-        // 4 tarjetas seguidas en una pantalla angosta (pedido explícito).
         <div className="space-y-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          {isMobile ? (
+            <div className="space-y-4">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-4">
+              <SkeletonCard className="col-span-2" />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          )}
+        </div>
+      ) : isMobile ? (
+        // Móvil: Ventas/Compras/Gastos/Rentabilidad van arriba en un grid
+        // 2x2 (ya son 4 tarjetas simples, no necesitan carrusel), luego la
+        // venta por hora/día a ancho completo, y los otros 4 widgets se
+        // agrupan en 2 carruseles de a 2 para no apilar 4 tarjetas seguidas
+        // en una pantalla angosta (pedido explícito).
+        <div className="space-y-4">
+          {statsWidget}
           {salesTimelineWidget}
           <Carousel slides={[topProductsWidget, expensesWidget]} />
           <Carousel slides={[paymentMethodsWidget, averageTicketWidget]} />
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="col-span-2">{salesTimelineWidget}</div>
-          {topProductsWidget}
-          {expensesWidget}
-          {paymentMethodsWidget}
-          {averageTicketWidget}
+        <div className="space-y-4">
+          {statsWidget}
+          <div className="grid grid-cols-3 gap-4">
+            <div className="col-span-2">{salesTimelineWidget}</div>
+            {topProductsWidget}
+            {expensesWidget}
+            {paymentMethodsWidget}
+            {averageTicketWidget}
+          </div>
         </div>
       )}
     </div>
