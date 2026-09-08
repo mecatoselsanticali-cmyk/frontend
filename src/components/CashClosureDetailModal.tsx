@@ -47,6 +47,21 @@ interface Financials {
   cashPurchases: number;
 }
 
+interface PurchaseRow {
+  _id: string;
+  concept: string;
+  amount: number;
+  createdAt: string;
+  productId?: { name: string } | null;
+}
+
+interface ExpenseRow {
+  _id: string;
+  concept: string;
+  amount: number;
+  createdAt: string;
+}
+
 /** Tabla de inventario reportado (apertura o cierre) — misma info que
  * `openShift`/`closeShift` guardan en `ProductStock`/`Product` al momento
  * exacto de cada uno (`buildStockSnapshot`, ver `cashClosureController.ts`),
@@ -118,6 +133,74 @@ function StockSnapshotTable({ title, verification }: { title: string; verificati
   );
 }
 
+/** Tabla simple de compras o gastos del turno (ítem + monto) — ver punto 55
+ * de admin-frontend/CLAUDE.md. Mismo shell visual que `StockSnapshotTable`
+ * de arriba, pero con solo 2 columnas: acá no hace falta precio/cantidad,
+ * el pedido explícito fue "descripción y monto pagado" nada más.
+ *
+ * `columnLabel`/`getLabel` son configurables porque compras y gastos
+ * muestran cosas distintas en esa primera columna: gastos usa `concept`
+ * (texto libre, no hay un modelo detrás), pero compras muestra el
+ * PRODUCTO real comprado (`productId.name`, poblado por el backend) en
+ * vez de `concept` — pedido explícito de que el admin vea el ítem
+ * concreto, no la frase genérica "Compra de stock: X" completa.
+ *
+ * El contenedor scrolleable usa una altura FIJA (`h-56`, no `max-h-56`)
+ * — con `max-h` el bloque se encogía cuando había pocas filas, haciendo
+ * que el modal completo cambiara de tamaño según cuánto tuviera cada
+ * turno; con altura fija el tamaño de esta tabla (y por lo tanto el
+ * layout del modal) no depende de la cantidad de filas, mismo criterio
+ * que el modal contenedor (ver el componente de más abajo). */
+function ConceptAmountTable<T extends { _id: string; concept: string; amount: number; createdAt: string }>({
+  title,
+  rows,
+  emptyMessage,
+  columnLabel = "Descripción",
+  getLabel = (r) => r.concept,
+}: {
+  title: string;
+  rows: T[];
+  emptyMessage: string;
+  columnLabel?: string;
+  getLabel?: (row: T) => React.ReactNode;
+}) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-neutral-700 mb-2">{title}</h4>
+      <div className="border border-neutral-200 rounded-lg overflow-hidden">
+        <div className="h-56 overflow-y-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-neutral-50 sticky top-0">
+              <tr className="text-left text-neutral-500">
+                <th className="p-2 font-medium">{columnLabel}</th>
+                <th className="p-2 font-medium text-right">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r._id} className="border-t border-neutral-100">
+                  <td className="p-2">
+                    {getLabel(r)}
+                    <span className="block text-neutral-400">{formatDateTime(r.createdAt)}</span>
+                  </td>
+                  <td className="p-2 text-right font-medium">{money(r.amount)}</td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={2} className="p-3 text-center text-neutral-400">
+                    {emptyMessage}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Vista de solo lectura del turno reportado por un cajero — botón "Ver" de
  * `FinanzasCaja.tsx` (ver punto 51 de admin-frontend/CLAUDE.md). A
@@ -134,6 +217,8 @@ export default function CashClosureDetailModal({
 }) {
   const [closure, setClosure] = useState<ClosureDetail | null>(null);
   const [financials, setFinancials] = useState<Financials | null>(null);
+  const [purchases, setPurchases] = useState<PurchaseRow[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -143,27 +228,38 @@ export default function CashClosureDetailModal({
       .then((res) => {
         setClosure(res.closure);
         setFinancials(res.financials);
+        setPurchases(res.purchases || []);
+        setExpenses(res.expenses || []);
       })
       .catch((err: any) => setError(err.message || "No se pudo cargar el turno"))
       .finally(() => setLoading(false));
   }, [closureId]);
 
+  // Altura FIJA (`h-[85vh]`, no `max-h-[90vh]`) con el header/footer fuera
+  // del área que scrollea — antes el modal entero crecía/encogía según
+  // cuánto turno tuviera cada cierre (poco stock/sin compras = modal
+  // chico, mucho de todo = modal casi a pantalla completa), lo que hacía
+  // que el header y el botón "Cerrar" se movieran de lugar entre un
+  // registro y otro. Con altura fija + `overflow-y-auto` solo en el
+  // cuerpo, el modal se ve igual siempre y el contenido de más scrollea
+  // adentro, mismo criterio que las tablas de abajo (ver
+  // `ConceptAmountTable`).
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 !m-0">
-      <div className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="p-6 space-y-5">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-bold">Detalle del turno</h3>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Cerrar"
-              className="text-neutral-400 hover:text-neutral-600 text-xl leading-none"
-            >
-              ✕
-            </button>
-          </div>
+      <div className="bg-white rounded-2xl w-full max-w-3xl h-[85vh] shadow-xl flex flex-col">
+        <div className="flex items-center justify-between p-6 pb-4 shrink-0 border-b border-neutral-100">
+          <h3 className="text-lg font-bold">Detalle del turno</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            className="text-neutral-400 hover:text-neutral-600 text-xl leading-none"
+          >
+            ✕
+          </button>
+        </div>
 
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {loading && <p className="text-sm text-neutral-400">Cargando...</p>}
           {error && <p className="text-sm text-red-500">{error}</p>}
 
@@ -294,14 +390,34 @@ export default function CashClosureDetailModal({
                 <StockSnapshotTable title="Inventario al abrir" verification={closure.openingStockVerification} />
                 <StockSnapshotTable title="Inventario al cerrar" verification={closure.closingStockVerification} />
               </div>
+
+              {/* Compras y gastos registrados por el cajero durante el
+                  turno (ver punto 55 de CLAUDE.md) — lista completa
+                  (cualquier método de pago/categoría), no solo el
+                  subconjunto en efectivo que ya resume "Compras (efectivo)"
+                  arriba. */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                <ConceptAmountTable
+                  title="Compras del turno"
+                  rows={purchases}
+                  emptyMessage="No se registraron compras en este turno"
+                  columnLabel="Producto"
+                  getLabel={(r) => r.productId?.name || r.concept}
+                />
+                <ConceptAmountTable
+                  title="Gastos del turno"
+                  rows={expenses}
+                  emptyMessage="No se registraron gastos en este turno"
+                />
+              </div>
             </>
           )}
+        </div>
 
-          <div className="flex justify-end pt-2">
-            <button onClick={onClose} className="bg-neutral-100 rounded-lg py-2 px-4 text-sm font-medium">
-              Cerrar
-            </button>
-          </div>
+        <div className="flex justify-end p-4 shrink-0 border-t border-neutral-100">
+          <button onClick={onClose} className="bg-neutral-100 rounded-lg py-2 px-4 text-sm font-medium">
+            Cerrar
+          </button>
         </div>
       </div>
     </div>
