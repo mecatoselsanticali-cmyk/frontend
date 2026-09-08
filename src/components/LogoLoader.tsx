@@ -47,7 +47,7 @@ export default function LogoLoader({ size = "md", fullScreen = false, text, clas
           className={`relative z-10 ${s.logo} object-contain select-none animate-logo-pulse`}
         />
       </div>
-      {text && <p className={`${s.text} text-neutral-500 font-medium`}>{text}</p>}
+      {text && <p className={`${s.text} text-neutral-500 font-medium mt-2`}>{text}</p>}
     </div>
   );
 
