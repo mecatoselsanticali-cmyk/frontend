@@ -23,7 +23,7 @@ export default function FinanzasCaja() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 20;
+  const pageSize = 11;
 
   const load = () => {
     setLoading(true);
