@@ -9,6 +9,7 @@ import { ReceiptText, ShoppingCart, Wallet } from "lucide-react";
 import ShiftModal from "../components/modals/ShiftModal";
 import MobileBlockScreen from "../components/MobileBlockScreen";
 import { useAuthSession } from "../../components/AuthProvider";
+import LogoLoader from "../../components/LogoLoader";
 
 const tabs = [
   { to: "/cajero/caja", label: "Caja", icon: <Wallet color="#ffffff" size={20}/> },
@@ -44,6 +45,7 @@ export default function CashierLayout() {
   const cashierName = usePosStore((s) => s.cashierName);
   const setShiftId = usePosStore((s) => s.setShiftId);
   const shiftId = usePosStore((s) => s.shiftId);
+  const shiftChecked = usePosStore((s) => s.shiftChecked);
   const activeModal = usePosStore((s) => s.activeModal);
   const openModal = usePosStore((s) => s.openModal);
 
@@ -168,8 +170,31 @@ export default function CashierLayout() {
         </div>
       </header>
 
+      {/* Mientras `shiftChecked` sigue en `false` (recién montado, todavía
+          esperando la respuesta de `GET /api/pos/shifts/current` de
+          arriba), Caja.tsx/Facturas.tsx/Compras.tsx caían en su rama
+          "por defecto" y montaban su contenido REAL de una — el grid de
+          venta, no `ShiftRequiredNotice` — porque su gate es
+          `shiftChecked && !shiftId`, que solo cubre "ya confirmamos que NO
+          hay turno", no "todavía no sabemos". Eso se veía como un
+          parpadeo de la pantalla de Caja completa (con carrito/pago
+          reales, aunque vacíos) antes de que apareciera el aviso
+          correcto. Se gatea acá (no en cada página) para cubrir las 3
+          pestañas de una sola vez sin duplicar la condición ni cruzar la
+          frontera de aislamiento de `src/cajero/` (punto 12) — este
+          archivo ya es una de las dos excepciones permitidas para
+          importar de fuera de esa carpeta. El header/nav/logout de arriba
+          siguen interactivos durante la carga (a propósito, ver punto 31:
+          nunca bloquear la navegación), solo el área de contenido
+          muestra el loader. */}
       <main className="flex-1 overflow-hidden">
-        <Outlet />
+        {shiftChecked ? (
+          <Outlet />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center">
+            <LogoLoader text="Verificando turno..." />
+          </div>
+        )}
       </main>
 
       {activeModal === "SHIFT" && <ShiftModal />}
