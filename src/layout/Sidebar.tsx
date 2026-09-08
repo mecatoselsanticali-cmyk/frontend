@@ -19,15 +19,33 @@ function initials(name: string) {
 // CLAUDE.md); el backend refuerza esto mismo en GET /users y en las rutas
 // de escritura de /branches y /users, así que ocultar el link acá es solo
 // UX, no la única barrera.
+// `tour` opcional: ancla el `data-tour` del onboarding (ver
+// src/onboarding/adminTourSteps.ts) al `<NavLink>` correspondiente, sin
+// tener que repetir el atributo a mano por cada entrada.
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
   { to: "/sedes", label: "Sedes", icon: <MapPinHouse size={20} />, roles: ["ADMIN"] },
-  { to: "/inventario", label: "Inventario", icon: <Layers size={20} /> },
+  {
+    to: "/inventario",
+    label: "Inventario",
+    icon: <Layers size={20} />,
+    tour: "inventory-link",
+  },
   { to: "/compras", label: "Compras", icon: <ShoppingCart size={20} /> },
-  { to: "/ventas", label: "Ventas", icon: <BadgeDollarSign size={20} /> },
+  {
+    to: "/ventas",
+    label: "Ventas",
+    icon: <BadgeDollarSign size={20} />,
+    tour: "logs-link",
+  },
   { to: "/gastos", label: "Gastos", icon: <Calculator size={20} /> },
   { to: "/personal", label: "Personal", icon: <User size={20} />, roles: ["ADMIN"] },
-  { to: "/finanzas", label: "Finanzas", icon: <Wallet size={20} /> },
+  {
+    to: "/finanzas",
+    label: "Finanzas",
+    icon: <Wallet size={20} />,
+    tour: "closures-link",
+  },
 ];
 
 /**
@@ -92,6 +110,7 @@ export default function Sidebar({ name, role, isOpen = false, onClose }: Sidebar
               key={link.to}
               to={link.to}
               onClick={onClose}
+              data-tour={link.tour}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-5 py-3 text-sm transition-colors ${
                   isActive

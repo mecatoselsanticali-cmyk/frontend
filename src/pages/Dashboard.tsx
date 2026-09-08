@@ -12,8 +12,12 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
+import { useAuthSession } from "../components/AuthProvider";
+import { adminTourSteps } from "../onboarding/adminTourSteps";
 import {
   todayColombia,
   addDaysToDateString,
@@ -164,6 +168,7 @@ function Carousel({ slides }: { slides: React.ReactNode[] }) {
 export default function Dashboard() {
   const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch();
+  const { admin, completeOnboarding } = useAuthSession();
   const [preset, setPreset] = useState<DatePreset>("today");
   const [customFrom, setCustomFrom] = useState(todayColombia());
   const [customTo, setCustomTo] = useState(todayColombia());
@@ -182,6 +187,55 @@ export default function Dashboard() {
       .then(setMetrics)
       .finally(() => setLoading(false));
   }, [selectedBranch, from, to]);
+
+  // Tour de onboarding — arranca automáticamente al montar el Dashboard
+  // (la pantalla de entrada de ADMIN/MANAGER) mientras
+  // `hasCompletedOnboarding` sea `false`. Los 4 elementos objetivo viven
+  // en Sidebar.tsx/Topbar.tsx (el shell de Layout.tsx), no en este
+  // archivo — ya están montados en el DOM porque Dashboard es hijo de
+  // Layout, nunca su hermano.
+  useEffect(() => {
+    if (!admin || admin.hasCompletedOnboarding) return;
+
+    // Distingue un `destroy()` disparado por el usuario (terminó el tour,
+    // tocó "Omitir", cerró con ×/Escape) de uno disparado por el cleanup
+    // de este efecto (navegación fuera de /dashboard, o el doble-montaje
+    // de React.StrictMode en dev) — solo el primero debe marcar el
+    // onboarding como completado. Sin esto, el StrictMode de dev montaría
+    // el tour, lo destruiría de inmediato en el cleanup del primer
+    // montaje, y esa destrucción "falsa" ya habría llamado al PATCH antes
+    // de que el segundo montaje (el real) llegara a mostrarlo.
+    let dismissedByCleanup = false;
+
+    const tourDriver = driver({
+      showProgress: true,
+      steps: adminTourSteps,
+      onPopoverRender: (popover) => {
+        const skipBtn = document.createElement("button");
+        skipBtn.type = "button";
+        skipBtn.textContent = "Omitir";
+        skipBtn.className = "driver-popover-footer-btn";
+        skipBtn.addEventListener("click", () => tourDriver.destroy());
+        popover.footerButtons.prepend(skipBtn);
+      },
+      onDestroyed: () => {
+        if (dismissedByCleanup) return;
+        completeOnboarding();
+        adminApi.completeOnboarding().catch(() => {
+          // best-effort — si falla, el peor caso es que el tour vuelva a
+          // aparecer en el próximo login, no es una operación crítica
+        });
+      },
+    });
+
+    tourDriver.drive();
+
+    return () => {
+      dismissedByCleanup = true;
+      tourDriver.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [admin?.id, admin?.hasCompletedOnboarding]);
 
   const summary = metrics?.summary;
   const salesTimeline = metrics?.salesTimeline || [];

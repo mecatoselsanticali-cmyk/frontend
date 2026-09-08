@@ -174,7 +174,7 @@ export default function PaymentPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-neutral-500 mb-2">Método de pago</h3>
-          <div className="grid grid-cols-2 gap-2">
+          <div data-tour="payment-methods" className="grid grid-cols-2 gap-2">
             {PAYMENT_METHODS.map((m) => {
               const Icon = m.icon;
               const active = selectedMethod === m.key;

@@ -9,11 +9,13 @@ export interface AdminProfile {
   name: string;
   role: string;
   branchId?: string;
+  hasCompletedOnboarding: boolean;
 }
 
 export interface CashierProfile {
   id: string;
   name: string;
+  hasCompletedOnboarding: boolean;
 }
 
 interface AuthSessionValue {
@@ -30,6 +32,12 @@ interface AuthSessionValue {
    * recargar la página completa, para que este estado no quede
    * desactualizado apuntando a una sesión que el backend ya cerró. */
   clearAuthSession: () => void;
+  /** Marca el tour de onboarding como completado en el perfil activo
+   * (admin O cajero, nunca ambos a la vez) sin esperar un nuevo `/me` —
+   * quien dispara el tour (Dashboard.tsx / Caja.tsx) ya llamó al PATCH
+   * correspondiente, esto solo evita que el tour se repita en esta misma
+   * sesión en memoria. */
+  completeOnboarding: () => void;
 }
 
 const AuthContext = createContext<AuthSessionValue | null>(null);
@@ -62,7 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await adminApi.me();
         if (cancelled) return;
-        setAdmin({ id: me.id, name: me.name, role: me.role, branchId: me.branchId });
+        setAdmin({
+          id: me.id,
+          name: me.name,
+          role: me.role,
+          branchId: me.branchId,
+          hasCompletedOnboarding: me.hasCompletedOnboarding,
+        });
         setCashier(null);
         setStatus("authenticated");
         return;
@@ -72,7 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await posApi.me();
         if (cancelled) return;
-        setCashier({ id: me.cashierId, name: me.name });
+        setCashier({
+          id: me.cashierId,
+          name: me.name,
+          hasCompletedOnboarding: me.hasCompletedOnboarding,
+        });
         setStatus("authenticated");
         return;
       } catch {
@@ -106,9 +124,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("unauthenticated");
   };
 
+  const completeOnboarding = () => {
+    setAdmin((prev) => (prev ? { ...prev, hasCompletedOnboarding: true } : prev));
+    setCashier((prev) => (prev ? { ...prev, hasCompletedOnboarding: true } : prev));
+  };
+
   return (
     <AuthContext.Provider
-      value={{ status, admin, cashier, setAdminSession, setCashierSession, clearAuthSession }}
+      value={{
+        status,
+        admin,
+        cashier,
+        setAdminSession,
+        setCashierSession,
+        clearAuthSession,
+        completeOnboarding,
+      }}
     >
       {children}
     </AuthContext.Provider>

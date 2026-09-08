@@ -32,11 +32,15 @@ export default function Topbar({
         <h2 className="text-xl font-bold text-neutral-800 truncate">{title}</h2>
       </div>
       {lockedBranchName ? (
-        <span className="border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-600 bg-neutral-50">
+        <span
+          data-tour="branch-selector"
+          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-600 bg-neutral-50"
+        >
           {lockedBranchName}
         </span>
       ) : (
         <select
+          data-tour="branch-selector"
           value={selectedBranch}
           onChange={(e) => onBranchChange(e.target.value)}
           className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"

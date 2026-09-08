@@ -25,6 +25,13 @@ interface PosState {
   branchName: string | null;
   cashierId: string | null;
   cashierName: string | null;
+  // Tour de onboarding (ver cajero/onboarding/cashierTourSteps.ts) —
+  // hidratado por CashierLayout.tsx desde `posApi.me()`, igual que el
+  // resto de la sesión. Se lee acá (no de `useAuthSession()`) porque
+  // Caja.tsx vive dentro de `src/cajero/` y no debe cruzar esa frontera
+  // (ver punto 12 de CLAUDE.md) — a diferencia de CashierLayout.tsx/
+  // RequireCashierAuth.tsx, que sí son una excepción documentada.
+  hasCompletedOnboarding: boolean;
 
   // Catálogo
   products: CachedProduct[];
@@ -46,8 +53,15 @@ interface PosState {
   activeModal: ModalType;
 
   // Acciones
-  setSession: (data: { branchId: string; branchName: string; cashierId: string; cashierName: string }) => void;
+  setSession: (data: {
+    branchId: string;
+    branchName: string;
+    cashierId: string;
+    cashierName: string;
+    hasCompletedOnboarding: boolean;
+  }) => void;
   clearSession: () => void;
+  completeOnboarding: () => void;
   // Marca `shiftChecked: true` siempre — se usa tanto para la
   // confirmación inicial (con el id real o null) como para actualizar el
   // id tras abrir/cerrar un turno.
@@ -68,6 +82,7 @@ export const usePosStore = create<PosState>((set, get) => ({
   branchName: null,
   cashierId: null,
   cashierName: null,
+  hasCompletedOnboarding: true,
 
   products: [],
   activeCategory: null,
@@ -79,8 +94,8 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   activeModal: null,
 
-  setSession: ({ branchId, branchName, cashierId, cashierName }) =>
-    set({ branchId, branchName, cashierId, cashierName }),
+  setSession: ({ branchId, branchName, cashierId, cashierName, hasCompletedOnboarding }) =>
+    set({ branchId, branchName, cashierId, cashierName, hasCompletedOnboarding }),
 
   clearSession: () =>
     set({
@@ -88,10 +103,13 @@ export const usePosStore = create<PosState>((set, get) => ({
       branchName: null,
       cashierId: null,
       cashierName: null,
+      hasCompletedOnboarding: true,
       order: [],
       shiftId: null,
       shiftChecked: false,
     }),
+
+  completeOnboarding: () => set({ hasCompletedOnboarding: true }),
 
   setShiftId: (id) => set({ shiftId: id, shiftChecked: true }),
 

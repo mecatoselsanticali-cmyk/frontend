@@ -9,6 +9,11 @@ export const adminApi = {
   /** Verifica la cookie httpOnly y devuelve el perfil del admin autenticado. */
   me: () => adminHttp.get("/auth/me").then((r) => r.data),
 
+  /** Tour de onboarding (Dashboard.tsx) — se llama al terminarlo o al
+   * omitirlo, para que no vuelva a aparecer en el próximo login. */
+  completeOnboarding: () =>
+    adminHttp.patch("/auth/onboarding-complete").then((r) => r.data),
+
   /**
    * Solo ADMIN/MANAGER (tienen correo) — un cajero nunca llega a este
    * flujo. Timeout más largo que el default de `adminHttp` (8s, ver

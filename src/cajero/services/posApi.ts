@@ -11,6 +11,11 @@ export const posApi = {
   /** Verifica la cookie httpOnly y devuelve los datos de la sesión actual. */
   me: () => posHttp.get("/auth/me").then((r) => r.data),
 
+  /** Tour de onboarding (Caja.tsx) — se llama al terminarlo o al omitirlo,
+   * para que no vuelva a aparecer en el próximo login. */
+  completeOnboarding: () =>
+    posHttp.patch("/auth/onboarding-complete").then((r) => r.data),
+
   // Paginado desde el backend (ver punto 46 de CLAUDE.md) — acepta
   // search (nombre o SKU) y category además de page/pageSize; la
   // respuesta trae { data, total, page, pageSize, totalPages, categories }.

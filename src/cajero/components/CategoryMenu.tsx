@@ -95,7 +95,7 @@ export default function CategoryMenu() {
             así que `overflow-x-auto` nunca llega a activarse y esta fila
             termina empujando/recortando el buscador en vez de scrollear
             sus propias tabs cuando no caben todas. */}
-        <div className="flex gap-2 overflow-x-auto min-w-0">
+        <div data-tour="categories" className="flex gap-2 overflow-x-auto min-w-0">
           <button
             onClick={() => setActiveCategory(null)}
             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap ${
@@ -129,7 +129,10 @@ export default function CategoryMenu() {
       </div>
 
       {/* Grid de productos con foto */}
-      <div className="flex-1 overflow-y-auto p-3 grid grid-cols-3 gap-3 content-start">
+      <div
+        data-tour="product-grid"
+        className="flex-1 overflow-y-auto p-3 grid grid-cols-3 gap-3 content-start"
+      >
         {products.length === 0 && (
           <p className="col-span-3 text-center text-sm text-neutral-400 py-8">
             No se encontraron productos

@@ -78,6 +78,7 @@ export default function CashierLayout() {
           branchName: session.branchName,
           cashierId: session.cashierId,
           cashierName: session.name,
+          hasCompletedOnboarding: session.hasCompletedOnboarding,
         });
         // Reintenta sincronizar ventas offline pendientes de sesiones anteriores
         syncPendingSales();
@@ -145,6 +146,7 @@ export default function CashierLayout() {
             el aviso de "Iniciar turno" en vez de datos reales. */}
         {shiftId && (
           <button
+            data-tour="shift-close"
             onClick={() => openModal("SHIFT")}
             title="Cerrar turno"
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-brand-500 to-brand-700 hover:from-brand-500 hover:to-brand-600 text-white font-bold text-sm px-5 py-2 rounded-xl shadow-lg shadow-brand-900/40 transition-all"

@@ -6,6 +6,7 @@ import Layout from "./layout/Layout";
 import RequireAuth from "./components/RequireAuth";
 import RequireRole from "./components/RequireRole";
 import { AuthProvider, useAuthSession } from "./components/AuthProvider";
+import LogoLoader from "./components/LogoLoader";
 
 // Cargadas perezosamente (`React.lazy`, ver punto 42 de
 // admin-frontend/CLAUDE.md) — antes eran imports estáticos, así que TODAS
@@ -47,8 +48,8 @@ function RootRedirect() {
 
   if (status === "checking") {
     return (
-      <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
-        Cargando...
+      <div className="h-dvh w-screen flex items-center justify-center">
+        <LogoLoader text="Cargando..." />
       </div>
     );
   }

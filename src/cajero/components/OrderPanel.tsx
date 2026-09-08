@@ -33,7 +33,7 @@ export default function OrderPanel() {
   };
 
   return (
-    <div className="w-[32%] h-full flex flex-col bg-white border-r border-neutral-200">
+    <div data-tour="cart-summary" className="w-[32%] h-full flex flex-col bg-white border-r border-neutral-200">
       <div className="p-4 border-b border-neutral-200">
         <h2 className="text-lg font-bold">Orden Actual</h2>
         <p className="text-neutral-400 text-sm">{order.length} ítem(s)</p>
