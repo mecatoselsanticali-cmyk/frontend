@@ -63,8 +63,9 @@ export default function FinanzasReportes() {
         <div>
           <h3 className="text-base font-bold">Reporte financiero</h3>
           <p className="text-sm text-neutral-500 mt-1">
-            Resumen y detalle de ventas, compras y gastos en el rango de fechas elegido, para la
-            sede seleccionada arriba (o todas las sedes si no eliges ninguna).
+            Resumen y detalle de inventario, ventas, compras y gastos, para la sede seleccionada
+            arriba (o todas las sedes si no eliges ninguna). El rango de fechas aplica a ventas,
+            compras y gastos — el inventario siempre refleja el stock actual.
           </p>
         </div>
 
