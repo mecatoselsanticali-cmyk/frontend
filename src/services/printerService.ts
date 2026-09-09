@@ -11,7 +11,6 @@ export interface PrintReceiptPayload {
   invoiceId: string;
   items: Array<{ name: string; quantity: number; price: number; subtotal: number }>;
   subtotal: number;
-  tax: number;
   total: number;
   cashier: string;
   paymentMethod: string;

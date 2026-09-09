@@ -302,16 +302,6 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
               </div>
 
               <div className="space-y-1 text-sm bg-neutral-50 rounded-lg p-3">
-                {/** 
-                <div className="flex justify-between text-neutral-500">
-                  <span>Subtotal</span>
-                  <span>{money(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-neutral-500">
-                  <span>Impuesto (INC)</span>
-                  <span>{money(tax)}</span>
-                </div>
-                */}
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
                   <span>{money(total)}</span>

@@ -27,8 +27,6 @@ const emptyForm = {
   // manda como 0 al backend, que lo interpreta como "sin monitorear",
   // nunca como "siempre crítico" (mismo criterio que `Product.minStock`).
   minStock: "",
-  taxType: "INC" as "INC" | "IVA" | "EXENTO",
-  taxRate: "0.08",
 };
 
 const ProductCategoryOptions = [
@@ -50,8 +48,6 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
           category: product.category,
           price: String(product.price),
           minStock: String(product.minStock ?? 0),
-          taxType: product.taxType,
-          taxRate: String(product.taxRate),
         }
       : emptyForm
   );
@@ -318,31 +314,6 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                 )}
               </div>
             )}
-            {/**
-             * 
-            <div>
-              <label className="text-xs text-neutral-500">Tipo de impuesto</label>
-              <select
-                value={form.taxType}
-                onChange={(e) => setForm({ ...form, taxType: e.target.value as any })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
-              >
-                <option value="INC">INC (8%)</option>
-                <option value="IVA">IVA (19%)</option>
-                <option value="EXENTO">Exento</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs text-neutral-500">Tasa de impuesto (decimal, ej. 0.08)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={form.taxRate}
-                onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
-              />
-            </div>
-            */}
           </div>
 
           {/* Modificadores 

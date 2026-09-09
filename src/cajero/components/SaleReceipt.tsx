@@ -48,7 +48,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
       subtotal: it.subtotal,
     })),
     subtotal: sale.subtotal,
-    tax: sale.tax,
     total: sale.total,
     cashier: cashierName || "—",
     paymentMethod: paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod,
@@ -151,10 +150,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             <div className="flex justify-between text-neutral-500">
               <span>Subtotal</span>
               <span>{money(sale.subtotal)}</span>
-            </div>
-            <div className="flex justify-between text-neutral-500">
-              <span>Impuesto (INC)</span>
-              <span>{money(sale.tax)}</span>
             </div>
             <div className="flex justify-between font-bold text-base border-t border-neutral-200 pt-1">
               <span>Total</span>

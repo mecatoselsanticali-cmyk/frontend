@@ -288,8 +288,6 @@ export default function Inventario() {
                 <th className="p-3 whitespace-nowrap hidden sm:table-cell">SKU</th>
                 <th className="p-3 whitespace-nowrap">Categoría</th>
                 <th className="p-3 whitespace-nowrap">Precio</th>
-                {/**
-                <th className="p-3">Impuesto</th>*/}
                 <th className="p-3 whitespace-nowrap">Stock</th>
                 <th className="p-3 whitespace-nowrap hidden sm:table-cell">Mín.</th>
                 <th className="p-3 whitespace-nowrap">Estado</th>
