@@ -12,7 +12,7 @@ import type { DriveStep } from "driver.js";
 // corresponde a un link restringido por rol (ver Sidebar.tsx: solo
 // "Sedes"/"Personal" llevan `roles: ["ADMIN"]`), así que no hace falta
 // una lista de pasos distinta por rol.
-export const adminTourSteps: DriveStep[] = [
+const baseSteps: DriveStep[] = [
   {
     element: '[data-tour="branch-selector"]',
     popover: {
@@ -54,3 +54,40 @@ export const adminTourSteps: DriveStep[] = [
     },
   },
 ];
+
+// Paso extra, SOLO en celular (ver `getAdminTourSteps` abajo) — los 3
+// últimos pasos de `baseSteps` apuntan a links de `Sidebar.tsx`, que en
+// `< md` viven detrás de un drawer off-canvas cerrado por default (ver
+// punto 36 de CLAUDE.md, `isOpen`/`-translate-x-full` en Sidebar.tsx) —
+// sin este paso, driver.js intentaba resaltar "Inventario" mientras el
+// link seguía fuera de la pantalla, a la izquierda del viewport.
+const menuButtonStep: DriveStep = {
+  element: '[data-tour="menu-button"]',
+  popover: {
+    title: "Menú",
+    description:
+      "Desde el celular, el menú de navegación (Sedes, Inventario, Ventas, Finanzas...) vive detrás de este botón. Tócalo para abrirlo — el tour sigue apenas se abra.",
+    side: "bottom",
+    align: "start",
+    // `onNextClick` REEMPLAZA el avance normal de driver.js (hay que
+    // llamar `moveNext()` a mano) — simula el click real del botón de
+    // hamburguesa (el mismo nodo del DOM que ya dispara `onMenuClick` en
+    // Topbar.tsx → `setSidebarOpen(true)` en Layout.tsx), en vez de
+    // inventar un mecanismo aparte para abrir el drawer desde acá. El
+    // `setTimeout` espera a que termine la transición CSS del drawer
+    // (`duration-200`, Sidebar.tsx) antes de dejar que driver.js calcule
+    // la posición del siguiente paso — sin esperar, mide la posición del
+    // link de Inventario a mitad de la animación, con el drawer todavía
+    // deslizándose desde fuera de la pantalla.
+    onNextClick: (_element, _step, opts) => {
+      (document.querySelector('[data-tour="menu-button"]') as HTMLElement | null)?.click();
+      window.setTimeout(() => opts.driver.moveNext(), 250);
+    },
+  },
+};
+
+export function getAdminTourSteps(isMobile: boolean): DriveStep[] {
+  if (!isMobile) return baseSteps;
+  const [branchSelectorStep, ...sidebarLinkSteps] = baseSteps;
+  return [branchSelectorStep, menuButtonStep, ...sidebarLinkSteps];
+}

@@ -21,7 +21,7 @@ import "driver.js/dist/driver.css";
 import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
 import { useAuthSession } from "../components/AuthProvider";
-import { adminTourSteps } from "../onboarding/adminTourSteps";
+import { getAdminTourSteps } from "../onboarding/adminTourSteps";
 import {
   todayColombia,
   addDaysToDateString,
@@ -220,10 +220,14 @@ export default function Dashboard() {
 
   // Tour de onboarding — arranca automáticamente al montar el Dashboard
   // (la pantalla de entrada de ADMIN/MANAGER) mientras
-  // `hasCompletedOnboarding` sea `false`. Los 4 elementos objetivo viven
-  // en Sidebar.tsx/Topbar.tsx (el shell de Layout.tsx), no en este
-  // archivo — ya están montados en el DOM porque Dashboard es hijo de
-  // Layout, nunca su hermano.
+  // `hasCompletedOnboarding` sea `false`. Los elementos objetivo viven en
+  // Sidebar.tsx/Topbar.tsx (el shell de Layout.tsx), no en este archivo —
+  // ya están montados en el DOM porque Dashboard es hijo de Layout, nunca
+  // su hermano. `getAdminTourSteps(isMobile)` (ver
+  // src/onboarding/adminTourSteps.ts) inserta un paso extra en celular
+  // que abre el drawer del Sidebar antes de mostrar los 3 links que viven
+  // adentro — sin eso, esos 3 pasos intentarían resaltar links fuera de
+  // pantalla (el drawer arranca cerrado, ver punto 36 de CLAUDE.md).
   useEffect(() => {
     if (!admin || admin.hasCompletedOnboarding) return;
 
@@ -239,7 +243,15 @@ export default function Dashboard() {
 
     const tourDriver = driver({
       showProgress: true,
-      steps: adminTourSteps,
+      // driver.js no trae español — sin esto, el contenido de cada paso
+      // (`getAdminTourSteps`) queda en español pero los botones/contador
+      // de progreso que la librería arma por su cuenta quedan en inglés
+      // ("Next →"/"← Previous"/"Done"/"1 of 5").
+      progressText: "{{current}} de {{total}}",
+      nextBtnText: "Siguiente",
+      prevBtnText: "Anterior",
+      doneBtnText: "Listo",
+      steps: getAdminTourSteps(isMobile),
       onPopoverRender: (popover) => {
         const skipBtn = document.createElement("button");
         skipBtn.type = "button";

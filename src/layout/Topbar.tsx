@@ -53,6 +53,7 @@ export default function Topbar({
         <button
           onClick={onMenuClick}
           aria-label="Abrir menú"
+          data-tour="menu-button"
           className="md:hidden text-neutral-500 hover:text-neutral-800 p-1 -ml-1 shrink-0"
         >
           <Menu size={22} />

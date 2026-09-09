@@ -46,6 +46,15 @@ export default function Caja() {
 
     const tourDriver = driver({
       showProgress: true,
+      // driver.js no trae español — sin esto, el contenido de cada paso
+      // (`cashierTourSteps`) queda en español pero los botones/contador
+      // de progreso que la librería arma por su cuenta quedan en inglés
+      // ("Next →"/"← Previous"/"Done"/"1 of 5"). Mismo criterio que el
+      // tour de ADMIN/MANAGER, ver Dashboard.tsx y punto 52 de CLAUDE.md.
+      progressText: "{{current}} de {{total}}",
+      nextBtnText: "Siguiente",
+      prevBtnText: "Anterior",
+      doneBtnText: "Listo",
       steps: cashierTourSteps,
       onPopoverRender: (popover) => {
         const skipBtn = document.createElement("button");
