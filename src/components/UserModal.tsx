@@ -145,7 +145,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -153,7 +153,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
               <select
                 value={form.role}
                 onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="CASHIER">Cajero</option>
                 <option value="MANAGER">Gerente de sede</option>
@@ -166,7 +166,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                 <select
                   value={form.branchId}
                   onChange={(e) => setForm({ ...form, branchId: e.target.value })}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 >
                   <option value="" disabled>
                     Selecciona...
@@ -187,7 +187,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                   maxLength={4}
                   value={form.pin}
                   onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 />
               </div>
             ) : (
@@ -197,7 +197,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                   <input
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                    className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                   />
                 </div>
                 {isEditing ? (
@@ -208,7 +208,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                       placeholder="Dejar en blanco para no cambiarla"
-                      className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                      className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                     />
                   </div>
                 ) : (

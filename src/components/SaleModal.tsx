@@ -165,7 +165,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
               <select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="">Selecciona una sede</option>
                 {branches.map((b) => (
@@ -206,7 +206,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                           <select
                             value={row.productId}
                             onChange={(e) => updateRow(i, { productId: e.target.value })}
-                            className="w-full border border-neutral-200 rounded-lg p-2 text-sm"
+                            className="w-full border border-neutral-200 rounded-lg p-2 text-base"
                           >
                             <option value="">Selecciona un producto</option>
                             {products.map((p) => (
@@ -221,7 +221,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                           min={1}
                           value={row.quantity}
                           onChange={(e) => updateRow(i, { quantity: e.target.value })}
-                          className={`w-20 border rounded-lg p-2 text-sm ${
+                          className={`w-20 border rounded-lg p-2 text-base ${
                             overStock ? "border-red-300 text-red-600" : "border-neutral-200"
                           }`}
                         />
@@ -245,7 +245,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 >
                   {Object.entries(paymentMethodLabels).map(([value, label]) => (
                     <option key={value} value={value}>
@@ -260,7 +260,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value as "REGULAR" | "SPECIAL")}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 >
                   <option value="REGULAR">Regular</option>
                   <option value="SPECIAL">Especial</option>
@@ -283,19 +283,19 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
                       placeholder="Nombre"
-                      className="border border-neutral-200 rounded-lg p-2 text-sm"
+                      className="border border-neutral-200 rounded-lg p-2 text-base"
                     />
                     <input
                       value={customerDocument}
                       onChange={(e) => setCustomerDocument(e.target.value)}
                       placeholder="Documento"
-                      className="border border-neutral-200 rounded-lg p-2 text-sm"
+                      className="border border-neutral-200 rounded-lg p-2 text-base"
                     />
                     <input
                       value={customerEmail}
                       onChange={(e) => setCustomerEmail(e.target.value)}
                       placeholder="Correo"
-                      className="border border-neutral-200 rounded-lg p-2 text-sm col-span-2"
+                      className="border border-neutral-200 rounded-lg p-2 text-base col-span-2"
                     />
                   </div>
                 )}

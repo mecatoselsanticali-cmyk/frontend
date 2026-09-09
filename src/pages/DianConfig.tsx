@@ -41,7 +41,7 @@ export default function DianConfig() {
     <div className="space-y-4 max-w-2xl">
       <select
         onChange={(e) => selectBranch(e.target.value)}
-        className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full"
+        className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-full"
         defaultValue=""
       >
         <option value="" disabled>
@@ -69,7 +69,7 @@ export default function DianConfig() {
                     dianConfig: { ...selected.dianConfig, prefix: e.target.value },
                   })
                 }
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -82,7 +82,7 @@ export default function DianConfig() {
                     dianConfig: { ...selected.dianConfig, resolutionNumber: e.target.value },
                   })
                 }
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -96,7 +96,7 @@ export default function DianConfig() {
                     dianConfig: { ...selected.dianConfig, from: Number(e.target.value) },
                   })
                 }
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -110,7 +110,7 @@ export default function DianConfig() {
                     dianConfig: { ...selected.dianConfig, to: Number(e.target.value) },
                   })
                 }
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div className="col-span-2">
@@ -119,7 +119,7 @@ export default function DianConfig() {
                 type="number"
                 value={selected.dailyCap || 0}
                 onChange={(e) => setSelected({ ...selected, dailyCap: Number(e.target.value) })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
           </div>

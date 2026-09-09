@@ -62,7 +62,7 @@ export default function ExpenseModal({ branchId, onClose, onSaved }: ExpenseModa
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             >
               <option value="">Selecciona una categoría</option>
               {categoryOptions.map((c) => (
@@ -78,7 +78,7 @@ export default function ExpenseModal({ branchId, onClose, onSaved }: ExpenseModa
             <input
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               placeholder="Ej. Pago arriendo local agosto"
             />
           </div>
@@ -89,7 +89,7 @@ export default function ExpenseModal({ branchId, onClose, onSaved }: ExpenseModa
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               placeholder="0"
             />
           </div>

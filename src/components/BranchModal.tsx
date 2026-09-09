@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { adminApi } from "../services/api";
+import Swal from "sweetalert2";
 
 interface BranchModalProps {
   branch?: any; // si viene, el modal edita en vez de crear
@@ -49,6 +50,15 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
         ? await adminApi.updateBranch(branch._id, payload)
         : await adminApi.createBranch({ ...payload, status: true });
       onSaved(saved);
+      // El selector de sede de Topbar.tsx vive en Layout.tsx, que carga su
+      // propia lista de sedes UNA sola vez al montar — sin esto, crear o
+      // editar una sede desde acá (ya sea Sedes.tsx o el "+ Crear nueva
+      // sede" de StockModal.tsx) la deja desactualizada hasta un refresh
+      // completo. Mismo patrón que `mecatos:branch-changed` (Layout.tsx,
+      // `useSelectedBranch`) — un evento global simple, sin necesidad de
+      // subir este estado a un context/store compartido.
+      window.dispatchEvent(new Event("mecatos:branches-changed"));
+      Swal.fire({ title: isEditing ? "Sede actualizada" : "Sede creada", icon: "success", timer: 1500, showConfirmButton: false });
       onClose();
     } catch (err: any) {
       setError(err.message || "No se pudo guardar la sede");
@@ -79,7 +89,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="Ej. Mecatos el Santi — Sede Norte"
               />
             </div>
@@ -88,7 +98,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
               <input
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -96,7 +106,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
               <input
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             

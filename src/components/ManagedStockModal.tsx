@@ -201,7 +201,7 @@ export default function ManagedStockModal({
                     inputMode="numeric"
                     value={quantities[b.branchId] ?? ""}
                     onChange={(e) => updateQuantity(b.branchId, e.target.value)}
-                    className="w-28 border border-neutral-200 rounded-lg p-2 text-sm text-right"
+                    className="w-28 border border-neutral-200 rounded-lg p-2 text-base text-right"
                     placeholder="0"
                   />
                 </div>

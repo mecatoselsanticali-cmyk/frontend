@@ -239,6 +239,20 @@ export default function Ventas() {
   // aplicados sin tener que abrir el modal a mirar.
   const extraFiltersCount = [date, cashierId, paymentMethod, dianStatus, category].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea TODOS los filtros de esta página a su valor por defecto,
+  // incluido `search` (que vive fuera del modal, en la barra compacta de
+  // celular) — "todos los filtros" es del punto de vista del admin, no
+  // solo los que técnicamente están dentro del modal en este momento.
+  const clearFilters = () => {
+    setSearch("");
+    setDate("");
+    setCashierId("");
+    setPaymentMethod("");
+    setDianStatus("");
+    setCategory("");
+  };
+
   return (
     <div className="space-y-4">
       {showWednesdayBanner && (
@@ -283,18 +297,18 @@ export default function Ventas() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por CUFE o ID..."
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-56"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-56"
               />
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
               />
               <select
                 value={cashierId}
                 onChange={(e) => setCashierId(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
               >
                 <option value="">Usuario: todos</option>
                 {cashierOptions.map((u) => (
@@ -306,7 +320,7 @@ export default function Ventas() {
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
               >
                 <option value="">Método de pago: todos</option>
                 {Object.entries(paymentMethodLabels).map(([value, label]) => (
@@ -328,7 +342,7 @@ export default function Ventas() {
               <select
                 value={dianStatus}
                 onChange={(e) => setDianStatus(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
               >
                 <option value="">Estado DIAN: todos</option>
                 <option value="PENDING">Pendiente</option>
@@ -362,7 +376,7 @@ export default function Ventas() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar por CUFE o ID..."
-              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <button
               onClick={() => setFiltersModalOpen(true)}
@@ -397,7 +411,7 @@ export default function Ventas() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <div>
             <label className="text-xs text-neutral-500 mb-1 block">Categoría</label>
             <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
@@ -422,7 +436,7 @@ export default function Ventas() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
           </div>
           <div>
@@ -430,7 +444,7 @@ export default function Ventas() {
             <select
               value={cashierId}
               onChange={(e) => setCashierId(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               {cashierOptions.map((u) => (
@@ -445,7 +459,7 @@ export default function Ventas() {
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               {Object.entries(paymentMethodLabels).map(([value, label]) => (
@@ -460,7 +474,7 @@ export default function Ventas() {
             <select
               value={dianStatus}
               onChange={(e) => setDianStatus(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               <option value="PENDING">Pendiente</option>

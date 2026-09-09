@@ -120,6 +120,13 @@ export default function Gastos() {
 
   const extraFiltersCount = [category, date].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea los dos filtros de esta página a su valor por defecto.
+  const clearFilters = () => {
+    setCategory("");
+    setDate("");
+  };
+
   return (
     <div className="space-y-4">
       {!isMobile && (
@@ -128,7 +135,7 @@ export default function Gastos() {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todas las categorías</option>
               <option value="PETTY_CASH">Caja menor</option>
@@ -141,7 +148,7 @@ export default function Gastos() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <div className="text-sm text-neutral-500">
               Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
@@ -187,13 +194,13 @@ export default function Gastos() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <div>
             <label className="text-xs text-neutral-500 mb-1 block">Categoría</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todas las categorías</option>
               <option value="PETTY_CASH">Caja menor</option>
@@ -209,7 +216,7 @@ export default function Gastos() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
           </div>
         </MoreFiltersModal>

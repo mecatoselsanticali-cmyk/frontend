@@ -78,7 +78,7 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             >
               {Object.entries(paymentMethodLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -103,7 +103,7 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
             <select
               value={orderType}
               onChange={(e) => setOrderType(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             >
               {Object.entries(orderTypeLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -118,7 +118,7 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as "REGULAR" | "SPECIAL")}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             >
               <option value="REGULAR">Regular</option>
               <option value="SPECIAL">Especial</option>
@@ -132,19 +132,19 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
                 placeholder="Nombre"
-                className="border border-neutral-200 rounded-lg p-2 text-sm"
+                className="border border-neutral-200 rounded-lg p-2 text-base"
               />
               <input
                 value={customerDocument}
                 onChange={(e) => setCustomerDocument(e.target.value)}
                 placeholder="Documento"
-                className="border border-neutral-200 rounded-lg p-2 text-sm"
+                className="border border-neutral-200 rounded-lg p-2 text-base"
               />
               <input
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
                 placeholder="Correo"
-                className="border border-neutral-200 rounded-lg p-2 text-sm col-span-2"
+                className="border border-neutral-200 rounded-lg p-2 text-base col-span-2"
               />
             </div>
           </div>

@@ -229,7 +229,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="Ej. Empanada de carne"
               />
             </div>
@@ -238,7 +238,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
               <select
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="">Selecciona una categoría</option>
                 {ProductCategoryOptions.map((pco) => (
@@ -254,7 +254,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                 type="number"
                 value={form.price}
                 onChange={(e) => setForm({ ...form, price: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div className="col-span-2">
@@ -267,7 +267,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                 value={form.minStock}
                 onChange={(e) => setForm({ ...form, minStock: e.target.value })}
                 placeholder="0 = sin alerta"
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
 
@@ -325,7 +325,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
               <select
                 value={form.taxType}
                 onChange={(e) => setForm({ ...form, taxType: e.target.value as any })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="INC">INC (8%)</option>
                 <option value="IVA">IVA (19%)</option>
@@ -339,7 +339,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                 step="0.01"
                 value={form.taxRate}
                 onChange={(e) => setForm({ ...form, taxRate: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             */}
@@ -369,14 +369,14 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                     value={mod.name}
                     onChange={(e) => updateModifier(i, "name", e.target.value)}
                     placeholder="Nombre del modificador"
-                    className="flex-1 border border-neutral-200 rounded-lg p-2 text-sm"
+                    className="flex-1 border border-neutral-200 rounded-lg p-2 text-base"
                   />
                   <input
                     type="number"
                     value={mod.extraPrice}
                     onChange={(e) => updateModifier(i, "extraPrice", e.target.value)}
                     placeholder="Precio extra"
-                    className="w-28 border border-neutral-200 rounded-lg p-2 text-sm"
+                    className="w-28 border border-neutral-200 rounded-lg p-2 text-base"
                   />
                   <button
                     type="button"

@@ -293,7 +293,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                 <input
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                   placeholder="Ej. Distribuidora XYZ"
                 />
               </div>
@@ -303,7 +303,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                 <input
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                   placeholder="Ej. Compra de insumos de la semana"
                 />
               </div>
@@ -344,7 +344,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                                   }
                                   updateBranchEntry(branchIndex, e.target.value);
                                 }}
-                                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                               >
                                 <option value="">Selecciona una sede</option>
                                 <option value={NEW_BRANCH_OPTION}>+ Crear nueva sede</option>
@@ -383,7 +383,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                                       }
                                       updateItem(branchIndex, itemIndex, { productId: e.target.value });
                                     }}
-                                    className="w-full border border-neutral-200 rounded-lg p-2 text-sm"
+                                    className="w-full border border-neutral-200 rounded-lg p-2 text-base"
                                   >
                                     <option value="">Selecciona un producto</option>
                                     <option value={NEW_PRODUCT_OPTION}>+ Crear nuevo producto</option>
@@ -400,7 +400,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                                   value={item.amount}
                                   onChange={(e) => updateItem(branchIndex, itemIndex, { amount: e.target.value })}
                                   placeholder="Monto pagado"
-                                  className="w-28 border border-neutral-200 rounded-lg p-2 text-sm"
+                                  className="w-28 border border-neutral-200 rounded-lg p-2 text-base"
                                 />
                                 <input
                                   type="number"
@@ -408,7 +408,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                                   value={item.quantity}
                                   onChange={(e) => updateItem(branchIndex, itemIndex, { quantity: e.target.value })}
                                   placeholder="Cantidad"
-                                  className="w-24 border border-neutral-200 rounded-lg p-2 text-sm"
+                                  className="w-24 border border-neutral-200 rounded-lg p-2 text-base"
                                 />
                                 <button
                                   type="button"
@@ -463,7 +463,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                     min={0}
                     value={quantityToAdd}
                     onChange={(e) => setQuantityToAdd(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                    className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                     placeholder="Ej. 100"
                   />
                 </div>
@@ -493,7 +493,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                           min={0}
                           value={allocations[b.branchId] || ""}
                           onChange={(e) => updateAllocation(b.branchId, e.target.value)}
-                          className="w-28 border border-neutral-200 rounded-lg p-2 text-sm"
+                          className="w-28 border border-neutral-200 rounded-lg p-2 text-base"
                           placeholder="0"
                         />
                       </div>

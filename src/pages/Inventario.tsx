@@ -178,6 +178,15 @@ export default function Inventario() {
 
   const extraFiltersCount = [showInactive, lowStockOnly].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea TODOS los filtros de esta página, incluido `search` (vive
+  // fuera del modal en la barra compacta de celular).
+  const clearFilters = () => {
+    setSearch("");
+    setShowInactive(false);
+    setLowStockOnly(false);
+  };
+
   return (
     <div className="space-y-4">
       {!isMobile && (
@@ -187,7 +196,7 @@ export default function Inventario() {
               placeholder="Buscar por nombre o SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-72"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-full sm:w-72"
             />
             <label className="flex items-center gap-2 text-sm text-neutral-500">
               <input
@@ -225,7 +234,7 @@ export default function Inventario() {
               placeholder="Buscar por nombre o SKU..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <button
               onClick={() => setFiltersModalOpen(true)}
@@ -249,7 +258,7 @@ export default function Inventario() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"

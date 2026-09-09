@@ -165,7 +165,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 <select
                   value={form.branchId}
                   onChange={(e) => setForm({ ...form, branchId: e.target.value, cashierId: "" })}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 >
                   <option value="">Selecciona...</option>
                   {branches.map((b) => (
@@ -181,7 +181,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
               <select
                 value={form.cashierId}
                 onChange={(e) => setForm({ ...form, cashierId: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 disabled={!form.branchId}
               >
                 <option value="">Selecciona...</option>
@@ -201,7 +201,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 type="datetime-local"
                 value={form.openedAt}
                 onChange={(e) => setForm({ ...form, openedAt: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
             <div>
@@ -210,7 +210,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 type="datetime-local"
                 value={form.closedAt}
                 onChange={(e) => setForm({ ...form, closedAt: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.initialCash}
                 onChange={(e) => setForm({ ...form, initialCash: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -234,7 +234,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.initialNequi}
                 onChange={(e) => setForm({ ...form, initialNequi: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -248,7 +248,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.declaredCash}
                 onChange={(e) => setForm({ ...form, declaredCash: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -259,7 +259,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.systemCalculatedCash}
                 onChange={(e) => setForm({ ...form, systemCalculatedCash: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -280,7 +280,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.nequiTotal}
                 onChange={(e) => setForm({ ...form, nequiTotal: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -291,7 +291,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.appsTotal}
                 onChange={(e) => setForm({ ...form, appsTotal: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -305,7 +305,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
                 min={0}
                 value={form.pettyCashExpenses}
                 onChange={(e) => setForm({ ...form, pettyCashExpenses: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
                 placeholder="0"
               />
             </div>
@@ -314,7 +314,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
               <select
                 value={form.reportType}
                 onChange={(e) => setForm({ ...form, reportType: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="Z">Z (cierre final)</option>
                 <option value="X">X (corte intermedio)</option>
@@ -325,7 +325,7 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
               <select
                 value={form.status}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               >
                 <option value="OPEN">Abierto</option>
                 <option value="CLOSED">Cerrado</option>

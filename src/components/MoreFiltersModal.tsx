@@ -2,6 +2,11 @@ import type { ReactNode } from "react";
 
 interface MoreFiltersModalProps {
   onClose: () => void;
+  // Resetea TODOS los filtros de la página (incluido el buscador, que
+  // vive fuera de este modal) a su valor por defecto — opcional para no
+  // romper un consumidor futuro que no lo necesite, pero las 7 páginas
+  // actuales (ver punto 63 de CLAUDE.md) siempre lo pasan.
+  onClear?: () => void;
   children: ReactNode;
 }
 
@@ -17,10 +22,18 @@ interface MoreFiltersModalProps {
  * No es un formulario con botón "Aplicar" — cada control adentro sigue
  * atado directamente al mismo estado que ya dispara la recarga vía
  * `useEffect` en la página que lo use (mismo patrón sin botón "Aplicar"
- * que el resto de filtros de este panel), así que el único botón del
- * footer es para cerrar, no para confirmar nada.
+ * que el resto de filtros de este panel), así que "Ver resultados" es
+ * solo para cerrar, no para confirmar nada.
+ *
+ * "Limpiar filtros" NO cierra el modal — a propósito, para que el admin
+ * vea los campos volver a su valor por defecto ahí mismo (los `<select>`/
+ * `<input>` reflejan el nuevo estado al instante, mismo `value` que ya
+ * tenían) antes de decidir si quiere ajustar algo más o cerrar con "Ver
+ * resultados" — mismo criterio de "no cerrar de golpe tras una acción
+ * destructiva" que el resto de confirmaciones de este panel (ver
+ * `Swal.fire` con `showCancelButton` en las páginas que lo usan).
  */
-export default function MoreFiltersModal({ onClose, children }: MoreFiltersModalProps) {
+export default function MoreFiltersModal({ onClose, onClear, children }: MoreFiltersModalProps) {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 !m-0">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl max-h-[85vh] flex flex-col">
@@ -38,11 +51,20 @@ export default function MoreFiltersModal({ onClose, children }: MoreFiltersModal
 
         <div className="p-5 space-y-4 overflow-y-auto">{children}</div>
 
-        <div className="p-5 pt-4 border-t border-neutral-100 shrink-0">
+        <div className="p-5 pt-4 border-t border-neutral-100 shrink-0 flex gap-2">
+          {onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="flex-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-lg py-2 text-sm font-medium"
+            >
+              Limpiar filtros
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white rounded-lg py-2 text-sm font-medium"
+            className="flex-1 bg-brand-600 hover:bg-brand-700 text-white rounded-lg py-2 text-sm font-medium"
           >
             Ver resultados
           </button>

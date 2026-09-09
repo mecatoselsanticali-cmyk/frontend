@@ -138,6 +138,15 @@ export default function Personal() {
 
   const extraFiltersCount = [role, showInactive].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea TODOS los filtros de esta página, incluido `search` (vive
+  // fuera del modal en la barra compacta de celular).
+  const clearFilters = () => {
+    setSearch("");
+    setRole("");
+    setShowInactive(false);
+  };
+
   return (
     <div className="space-y-4">
       {!isMobile && (
@@ -148,12 +157,12 @@ export default function Personal() {
               placeholder="Buscar por nombre o correo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-64"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-full sm:w-64"
             />
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Rol: todos</option>
               {Object.entries(roleLabels).map(([value, label]) => (
@@ -190,7 +199,7 @@ export default function Personal() {
               placeholder="Buscar por nombre o correo..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <button
               onClick={() => setFiltersModalOpen(true)}
@@ -214,13 +223,13 @@ export default function Personal() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <div>
             <label className="text-xs text-neutral-500 mb-1 block">Rol</label>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               {Object.entries(roleLabels).map(([value, label]) => (

@@ -82,7 +82,7 @@ export default function ExpenseEditModal({ expense, onClose, onSaved }: ExpenseE
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             >
               {categoryOptions.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -97,7 +97,7 @@ export default function ExpenseEditModal({ expense, onClose, onSaved }: ExpenseE
             <input
               value={concept}
               onChange={(e) => setConcept(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
 
@@ -108,7 +108,7 @@ export default function ExpenseEditModal({ expense, onClose, onSaved }: ExpenseE
               min={0}
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
 

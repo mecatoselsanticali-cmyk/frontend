@@ -81,7 +81,7 @@ export default function CuentasPorPagar() {
             <input
               value={form.supplierName}
               onChange={(e) => setForm({ ...form, supplierName: e.target.value })}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
           <div>
@@ -89,7 +89,7 @@ export default function CuentasPorPagar() {
             <input
               value={form.invoiceNumber}
               onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
           <div>
@@ -98,7 +98,7 @@ export default function CuentasPorPagar() {
               type="number"
               value={form.totalAmount}
               onChange={(e) => setForm({ ...form, totalAmount: e.target.value })}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
           <div>
@@ -107,7 +107,7 @@ export default function CuentasPorPagar() {
               type="date"
               value={form.dueDate}
               onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
           <button onClick={submit} className="bg-brand-600 text-white rounded-lg py-2 text-sm font-medium">

@@ -420,7 +420,7 @@ export default function Dashboard() {
         <EmptyState message="No hay gastos registrados en el rango seleccionado" />
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={expensesByCategory} margin={{ left: 0, right: 8, top: 8 }}>
+          <BarChart data={expensesByCategory} margin={{ left: 8, right: 8, top: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
             <XAxis
               dataKey="category"
@@ -432,13 +432,17 @@ export default function Dashboard() {
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
-              width={40}
-              // A diferencia de salesTimelineWidget (en miles, `$Nk`), acá
-              // en millones (`$N,NM`) — un gasto típico de este negocio ya
-              // arranca en cientos de miles/millones (ej. "Nómina" en la
-              // captura de referencia: $4.000.000+), así que en miles el
-              // eje quedaba con números de 4-5 cifras, más difíciles de
-              // leer de un vistazo que "$4M"/"$1,2M".
+              // 40px (sin margin.left) recortaba el "$" de los ticks del
+              // medio (ej. "19,5M") — más anchos que los de punta ("$26M"/
+              // "$0M") por el decimal con coma. Recharts alinea el texto
+              // del eje Y contra la línea del eje (a la derecha); si el
+              // texto no entra en el ancho reservado, el sobrante se va
+              // hacia la izquierda y, sin margen que lo absorba, quedaba
+              // cortado por el borde del SVG — el primer carácter que se
+              // pierde es justo el "$", al ser el más a la izquierda.
+              // 48px + el `margin.left: 8` de arriba dan espacio de sobra
+              // para el tick más largo esperado ("$100M" o similar).
+              width={48}
               tickFormatter={(v) => `$${(v / 1_000_000).toLocaleString("es-CO", { maximumFractionDigits: 1 })}M`}
             />
             <Tooltip
@@ -567,7 +571,7 @@ export default function Dashboard() {
         <select
           value={preset}
           onChange={(e) => setPreset(e.target.value as DatePreset)}
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+          className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
         >
           {presetLabels.map((p) => (
             <option key={p.value} value={p.value}>
@@ -582,14 +586,14 @@ export default function Dashboard() {
               type="date"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <span className="text-neutral-400 text-sm">a</span>
             <input
               type="date"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
           </>
         )}

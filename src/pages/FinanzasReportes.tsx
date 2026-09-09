@@ -76,7 +76,7 @@ export default function FinanzasReportes() {
               type="date"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
           <div>
@@ -85,7 +85,7 @@ export default function FinanzasReportes() {
               type="date"
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
             />
           </div>
         </div>

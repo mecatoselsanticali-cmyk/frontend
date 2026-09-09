@@ -204,7 +204,7 @@ export default function PendingDidiPaymentsModal({
                 <input
                   value={reference}
                   onChange={(e) => setReference(e.target.value)}
-                  className="w-full mt-1 border border-neutral-200 rounded-lg p-2 text-sm"
+                  className="w-full mt-1 border border-neutral-200 rounded-lg p-2 text-base"
                   placeholder="Ej. TRX-00123456"
                 />
               </div>

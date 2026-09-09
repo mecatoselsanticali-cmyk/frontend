@@ -5,7 +5,6 @@ import { useSelectedBranch } from "../layout/Layout";
 import FinanzasTabs from "../components/FinanzasTabs";
 import CashClosureModal from "../components/CashClosureModal";
 import CashClosureDetailModal from "../components/CashClosureDetailModal";
-import MoreFiltersModal from "../components/MoreFiltersModal";
 import ActionsMenu from "../components/ActionsMenu";
 import { formatDateTime } from "../utils/timezone";
 
@@ -118,6 +117,13 @@ export default function FinanzasCaja() {
 
   const extraFiltersCount = [date, cashierId].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea los dos filtros de esta página a su valor por defecto.
+  const clearFilters = () => {
+    setDate("");
+    setCashierId("");
+  };
+
   return (
     <div className="space-y-4">
       <FinanzasTabs />
@@ -140,12 +146,12 @@ export default function FinanzasCaja() {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+          className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
         />
         <select
           value={cashierId}
           onChange={(e) => setCashierId(e.target.value)}
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+          className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
         >
           <option value="">Cajero: todos</option>
           {cashierOptions.map((c) => (

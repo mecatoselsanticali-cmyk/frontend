@@ -40,7 +40,7 @@ export default function Sedes() {
   const [total, setTotal] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
   const [search, setSearch] = useState("");
-  const pageSize = isMobile ? 5 : 20;
+  const pageSize = isMobile ? 6 : 20;
 
   const load = () => {
     setLoading(true);
@@ -93,6 +93,11 @@ export default function Sedes() {
     try {
       await adminApi.updateBranch(branch._id, { status: false });
       load();
+      // Desactivar una sede también debe sacarla del selector de Topbar.tsx
+      // (Layout.tsx la carga con `includeInactive` sin marcar, o sea solo
+      // activas) — mismo evento que BranchModal.tsx dispara al crear/
+      // editar, ver el comentario ahí.
+      window.dispatchEvent(new Event("mecatos:branches-changed"));
       Swal.fire({ title: "Sede eliminada", icon: "success", timer: 1500, showConfirmButton: false });
     } catch (err: any) {
       Swal.fire({ title: "Error", text: err.message || "No se pudo eliminar la sede", icon: "error" });
@@ -106,6 +111,7 @@ export default function Sedes() {
     try {
       await adminApi.updateBranch(branch._id, { status: true });
       load();
+      window.dispatchEvent(new Event("mecatos:branches-changed"));
       Swal.fire({ title: "Sede reactivada", icon: "success", timer: 1500, showConfirmButton: false });
     } catch (err: any) {
       Swal.fire({ title: "Error", text: err.message || "No se pudo reactivar la sede", icon: "error" });
@@ -115,6 +121,14 @@ export default function Sedes() {
   };
 
   const extraFiltersCount = [showInactive].filter(Boolean).length;
+
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea TODOS los filtros de esta página, incluido `search` (vive
+  // fuera del modal en la barra compacta de celular).
+  const clearFilters = () => {
+    setSearch("");
+    setShowInactive(false);
+  };
 
   return (
     <div className="space-y-4">
@@ -126,7 +140,7 @@ export default function Sedes() {
               placeholder="Buscar por nombre, dirección o teléfono..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-72"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-full sm:w-72"
             />
             <label className="flex items-center gap-2 text-sm text-neutral-500">
               <input
@@ -156,7 +170,7 @@ export default function Sedes() {
               placeholder={`${isMobile ? "Buscar..." : "Buscar por nombre, dirección o teléfono..."}`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <button
               onClick={() => setFiltersModalOpen(true)}
@@ -180,7 +194,7 @@ export default function Sedes() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"

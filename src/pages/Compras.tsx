@@ -130,6 +130,14 @@ export default function Compras() {
 
   const extraFiltersCount = [date, productId, registeredBy].filter(Boolean).length;
 
+  // "Limpiar filtros" del modal "Más filtros" (ver punto 63 de CLAUDE.md)
+  // — resetea los tres filtros de esta página a su valor por defecto.
+  const clearFilters = () => {
+    setDate("");
+    setProductId("");
+    setRegisteredBy("");
+  };
+
   return (
     <div className="space-y-4">
       {!isMobile && (
@@ -140,12 +148,12 @@ export default function Compras() {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Producto: todos</option>
               {productOptions.map((p) => (
@@ -157,7 +165,7 @@ export default function Compras() {
             <select
               value={registeredBy}
               onChange={(e) => setRegisteredBy(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Usuario: todos</option>
               {userOptions.map((u) => (
@@ -212,14 +220,14 @@ export default function Compras() {
       )}
 
       {filtersModalOpen && (
-        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <div>
             <label className="text-xs text-neutral-500 mb-1 block">Fecha</label>
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             />
           </div>
           <div>
@@ -227,7 +235,7 @@ export default function Compras() {
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               {productOptions.map((p) => (
@@ -242,7 +250,7 @@ export default function Compras() {
             <select
               value={registeredBy}
               onChange={(e) => setRegisteredBy(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
               {userOptions.map((u) => (
