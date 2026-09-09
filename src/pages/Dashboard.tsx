@@ -34,6 +34,19 @@ const BRAND = "#ea580c";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
+// Mismo mapeo que ya existe en Gastos.tsx (duplicado ahí, no importado —
+// cada página del panel mantiene su propia copia de estas etiquetas
+// chicas, mismo criterio que `paymentMethodLabels` en Ventas.tsx) — sin
+// esto, el widget de "Gastos por categoría" mostraba el valor crudo del
+// enum de `Expense.category` (ej. "PETTY_CASH") en vez de en español.
+const expenseCategoryLabels: Record<string, string> = {
+  PETTY_CASH: "Caja menor",
+  ARRIENDO: "Arriendo",
+  NOMINA: "Nómina",
+  SERVICIOS_PUBLICOS: "Servicios públicos",
+  OTRO: "Otro",
+};
+
 type DatePreset = "today" | "yesterday" | "week" | "month" | "custom";
 
 // Todo el cálculo de rangos parte de `todayColombia()` (el día calendario
@@ -253,7 +266,10 @@ export default function Dashboard() {
   const salesTimeline = metrics?.salesTimeline || [];
   const timelineGranularity: "hour" | "day" = metrics?.timelineGranularity || "hour";
   const topProducts = metrics?.topProducts || [];
-  const expensesByCategory = metrics?.expensesByCategory || [];
+  const expensesByCategory = (metrics?.expensesByCategory || []).map((e: any) => ({
+    ...e,
+    category: expenseCategoryLabels[e.category] || e.category,
+  }));
   const paymentMethods = metrics?.paymentMethods || [];
 
   const hasSales = salesTimeline.some((h: any) => h.total > 0);
@@ -334,7 +350,11 @@ export default function Dashboard() {
               layout="vertical"
               verticalAlign="middle"
               align="right"
-              wrapperStyle={{ fontSize: 11 }}
+              // 11px era difícil de leer — mismo tamaño en las dos leyendas
+              // de este dashboard (Top 5 productos / Gastos por categoría),
+              // ver punto correspondiente si se vuelve a tocar cualquiera
+              // de las dos, para que no queden desincronizadas de nuevo.
+              wrapperStyle={{ fontSize: 13, lineHeight: "20px" }}
               formatter={(value) => <span className="text-neutral-600">{value}</span>}
             />
           </PieChart>
@@ -371,7 +391,11 @@ export default function Dashboard() {
               layout="vertical"
               verticalAlign="middle"
               align="right"
-              wrapperStyle={{ fontSize: 11 }}
+              // 11px era difícil de leer — mismo tamaño en las dos leyendas
+              // de este dashboard (Top 5 productos / Gastos por categoría),
+              // ver punto correspondiente si se vuelve a tocar cualquiera
+              // de las dos, para que no queden desincronizadas de nuevo.
+              wrapperStyle={{ fontSize: 13, lineHeight: "20px" }}
               formatter={(value) => <span className="text-neutral-600">{value}</span>}
             />
           </PieChart>
