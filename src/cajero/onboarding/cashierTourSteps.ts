@@ -46,7 +46,7 @@ export const cashierTourSteps: DriveStep[] = [
     element: '[data-tour="payment-methods"]',
     popover: {
       title: "Método de pago",
-      description: "Efectivo, Nequi, Datáfono o App Delivery (DiDi/Rappi) — elige uno para habilitar \"Cobrar\".",
+      description: "Efectivo, Nequi o App Delivery (DiDi/Rappi) — elige uno para habilitar \"Cobrar\".",
       side: "left",
       align: "start",
     },

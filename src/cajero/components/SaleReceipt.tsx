@@ -8,10 +8,16 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
+// "CARD" (Tarjeta) se quitó a propósito — el negocio no recibe pagos con
+// datáfono (ver punto 61 de admin-frontend/CLAUDE.md, y la copia de este
+// mismo mapa en el panel admin, `components/SaleReceipt.tsx`). Acá es
+// puramente de despliegue (nada arma un <select> con esto en la zona de
+// cajero, ver PaymentPanel.tsx) — una venta vieja con `paymentMethod:
+// "CARD"` sigue mostrándose bien gracias al fallback `|| sale.
+// paymentMethod` de abajo, solo con el valor crudo en vez de una etiqueta.
 export const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
   NEQUI: "Nequi",
-  CARD: "Tarjeta",
   DELIVERY_APP: "App de domicilios",
 };
 

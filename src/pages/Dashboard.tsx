@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -12,6 +15,7 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { CircleCheck, TriangleAlert } from "lucide-react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { adminApi } from "../services/api";
@@ -90,11 +94,11 @@ const presetLabels: { value: DatePreset; label: string }[] = [
 // Tarjeta de KPI simple (Ventas/Compras/Gastos/Rentabilidad) — mismo
 // patrón visual (`bg-white rounded-xl border`) que el resto de widgets de
 // este dashboard, pero sin gráfico: solo una etiqueta y un monto grande.
-function StatCard({ label, value, valueClassName = "text-neutral-800" }: { label: string; value: string; valueClassName?: string }) {
+function StatCard({ label, value, valueClassName = "text-neutral-800", isMobile }: { label: string; value: string; valueClassName?: string; isMobile?: boolean }) {
   return (
     <div className="bg-white rounded-xl border border-neutral-100 p-5">
       <h3 className="text-sm text-neutral-500 mb-1">{label}</h3>
-      <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
+      <p className={`${isMobile ? "text-xl" : "text-2xl"} font-bold ${valueClassName}`}>{value}</p>
     </div>
   );
 }
@@ -192,6 +196,7 @@ function Carousel({ slides }: { slides: React.ReactNode[] }) {
 
 export default function Dashboard() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const [selectedBranch] = useSelectedBranch();
   const { admin, completeOnboarding } = useAuthSession();
   const [preset, setPreset] = useState<DatePreset>("today");
@@ -271,10 +276,42 @@ export default function Dashboard() {
     category: expenseCategoryLabels[e.category] || e.category,
   }));
   const paymentMethods = metrics?.paymentMethods || [];
+  // Widget "Stock Crítico" (ver punto 62 de CLAUDE.md) — ya viene
+  // ordenado ascendente por cantidad disponible (los más urgentes
+  // primero) desde `getCriticalStockProducts` en el backend.
+  const criticalStock = metrics?.criticalStock || [];
+
+  // Ticks explícitos del eje X de "Comportamiento de ventas" cuando la
+  // granularidad es por hora (24 puntos, "00:00".."23:00") — sin esto,
+  // Recharts decide los ticks a mostrar por su cuenta con un algoritmo
+  // que SIEMPRE fuerza el último punto (23:00) a quedar visible y reparte
+  // los demás desde ahí, lo que rompe el espaciado parejo justo antes del
+  // final (ej. en escritorio saltaba de "21:00" a "23:00", saltándose
+  // "22:00" por completo — reportado como "no se ve la hora 22 en el
+  // borde"). Un arreglo explícito de horas parejas (cada 2h en escritorio,
+  // cada 4h en celular, donde cabe menos texto) evita ese salto y hace que
+  // el espaciado sea siempre predecible.
+  // Anclado a "22:00" hacia atrás (no desde "00:00" hacia adelante) —
+  // Recharts, incluso con `ticks` explícitos, sigue forzando que el
+  // ÚLTIMO valor del arreglo quede visible si el contenedor es angosto
+  // (mismo comportamiento de "preservar el final" que causaba el bug,
+  // solo que ahora aplicado sobre nuestra lista en vez de sobre las 24
+  // horas crudas) — anclando en 22 en vez de 0, ese último-forzado
+  // siempre termina siendo "22:00" sin importar el ancho de pantalla, en
+  // vez de terminar en "20:00"/"23:00" según cuántos ticks quepan.
+  const hourTickStep = isMobile ? 4 : 2;
+  const hourTicks =
+    timelineGranularity === "hour"
+      ? Array.from({ length: Math.floor(22 / hourTickStep) + 1 }, (_, i) => {
+          const hour = 22 - i * hourTickStep;
+          return `${String(hour).padStart(2, "0")}:00`;
+        }).reverse()
+      : undefined;
 
   const hasSales = salesTimeline.some((h: any) => h.total > 0);
   const hasTopProducts = topProducts.length > 0;
   const hasExpenses = expensesByCategory.length > 0;
+  const hasCriticalStock = criticalStock.length > 0;
 
   // Cada widget se arma una sola vez acá y se reutiliza tal cual en el
   // layout de escritorio (grid de 3 columnas) o en la pila + carruseles de
@@ -289,7 +326,7 @@ export default function Dashboard() {
         <EmptyState message="No hay ventas registradas en el rango seleccionado" />
       ) : (
         <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={salesTimeline} margin={{ left: 8, right: 8 }}>
+          <AreaChart data={salesTimeline} margin={{ left: 0, right: 8 }}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={BRAND} stopOpacity={0.35} />
@@ -297,11 +334,24 @@ export default function Dashboard() {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
-            <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#a3a3a3" }} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              axisLine={false}
+              tickLine={false}
+              ticks={hourTicks}
+            />
             <YAxis
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
+              // Recharts reserva 60px para el eje Y por default sin
+              // importar cuánto mida el texto real de los ticks ("$20k"
+              // no necesita eso) — en celular, con el widget a ~340px de
+              // ancho, ese sobrante se veía como un padding grande a la
+              // izquierda del gráfico. 40px alcanza sin recortar el texto
+              // más largo ("$20k") en ninguno de los dos tamaños.
+              width={40}
               tickFormatter={(v) => `$${(v / 1000).toLocaleString("es-CO")}k`}
             />
             <Tooltip
@@ -370,35 +420,34 @@ export default function Dashboard() {
         <EmptyState message="No hay gastos registrados en el rango seleccionado" />
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <PieChart>
-            <Pie
-              data={expensesByCategory}
-              dataKey="amount"
-              nameKey="category"
-              innerRadius={45}
-              outerRadius={75}
-              paddingAngle={2}
-            >
-              {expensesByCategory.map((_: any, i: number) => (
-                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-              ))}
-            </Pie>
+          <BarChart data={expensesByCategory} margin={{ left: 0, right: 8, top: 8 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
+            <XAxis
+              dataKey="category"
+              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
+              // A diferencia de salesTimelineWidget (en miles, `$Nk`), acá
+              // en millones (`$N,NM`) — un gasto típico de este negocio ya
+              // arranca en cientos de miles/millones (ej. "Nómina" en la
+              // captura de referencia: $4.000.000+), así que en miles el
+              // eje quedaba con números de 4-5 cifras, más difíciles de
+              // leer de un vistazo que "$4M"/"$1,2M".
+              tickFormatter={(v) => `$${(v / 1_000_000).toLocaleString("es-CO", { maximumFractionDigits: 1 })}M`}
+            />
             <Tooltip
-              formatter={(v: number, _n, entry: any) => [`${money(v)} (${entry.payload.percentage}%)`, entry.payload.category]}
+              formatter={(v: number, _n, entry: any) => [`${money(v)} (${entry.payload.percentage}%)`, "Gasto"]}
+              labelFormatter={(label) => label}
               contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: "#e5e5e5" }}
             />
-            <Legend
-              layout="vertical"
-              verticalAlign="middle"
-              align="right"
-              // 11px era difícil de leer — mismo tamaño en las dos leyendas
-              // de este dashboard (Top 5 productos / Gastos por categoría),
-              // ver punto correspondiente si se vuelve a tocar cualquiera
-              // de las dos, para que no queden desincronizadas de nuevo.
-              wrapperStyle={{ fontSize: 13, lineHeight: "20px" }}
-              formatter={(value) => <span className="text-neutral-600">{value}</span>}
-            />
-          </PieChart>
+            <Bar dataKey="amount" fill={BRAND} radius={[4, 4, 0, 0]} />
+          </BarChart>
         </ResponsiveContainer>
       )}
     </div>
@@ -432,49 +481,82 @@ export default function Dashboard() {
   const profitability = summary?.profitability ?? 0;
   const statsWidget = (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <StatCard label="Ventas" value={money(summary?.netTotal || 0)} />
-      <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} />
-      <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} />
+      <StatCard label="Ventas" value={money(summary?.netTotal || 0)} isMobile={isMobile} />
+      <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} isMobile={isMobile} />
+      <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} isMobile={isMobile} />
       <StatCard
         label="Rentabilidad"
         value={profitability < 0 ? `-${money(Math.abs(profitability))}` : money(profitability)}
         valueClassName={profitability < 0 ? "text-red-500" : "text-green-600"}
+        isMobile={isMobile}
       />
     </div>
   );
 
-  const averageTicketWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
-      <h3 className="font-semibold text-neutral-700 mb-1">Ticket promedio</h3>
-      <p className="text-2xl font-bold text-brand-600 mb-4">{money(summary?.averageTicket || 0)}</p>
-      <div className="space-y-1.5 text-sm">
-        <div className="flex justify-between">
-          <span className="text-neutral-500">Total bruto</span>
-          <span className="font-medium">{money(summary?.grossTotal || 0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500">Descuentos</span>
-          <span className="font-medium text-neutral-400">{money(summary?.discountTotal || 0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500">Impoconsumo (8%)</span>
-          <span className="font-medium">{money(summary?.impoconsumoTotal || 0)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-neutral-500" title="Este sistema no distingue IVA del Impoconsumo hoy — todas las ventas usan una tasa plana del 8%.">
-            IVA (19%)
+  // Widget "Stock Crítico" (ver punto 62 de CLAUDE.md) — reemplaza al
+  // viejo "Ticket promedio" (quitado por completo, no solo oculto: el
+  // pedido explícito fue reemplazar la tarjeta, no agregar una quinta).
+  // A diferencia del resto de widgets de este dashboard, NO depende de
+  // `from`/`to` — el stock es una foto del momento actual, ver el
+  // comentario del backend en `getCriticalStockProducts`. Solo respeta
+  // la sede elegida en la topbar.
+  const criticalStockWidget = (
+    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-3 gap-2">
+        <h3 className="font-semibold text-neutral-700">Stock Crítico</h3>
+        {hasCriticalStock && (
+          <span className="shrink-0 text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded-full">
+            {criticalStock.length} {criticalStock.length === 1 ? "producto en riesgo" : "productos en riesgo"}
           </span>
-          <span className="font-medium text-neutral-400">{money(summary?.ivaTotal || 0)}</span>
-        </div>
-        <div className="flex justify-between pt-1.5 border-t border-neutral-100">
-          <span className="font-semibold text-neutral-700">Total neto</span>
-          <span className="font-bold text-brand-600">{money(summary?.netTotal || 0)}</span>
-        </div>
-        <div className="flex justify-between text-xs text-neutral-400 pt-1">
-          <span>Transacciones</span>
-          <span>{summary?.totalTransactions || 0}</span>
-        </div>
+        )}
       </div>
+
+      {!hasCriticalStock ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+          <CircleCheck className="text-green-500 mb-2" size={32} />
+          <p className="text-sm text-neutral-500">Todo el inventario está al día</p>
+        </div>
+      ) : (
+        <div className="flex-1 max-h-52 overflow-y-auto space-y-1 pr-1">
+          {criticalStock.map((p: any) => {
+            const isOut = p.quantity <= 0;
+            // `minStock` puede ser 0 (sin umbral configurado) para un
+            // producto que igual aparece acá por estar en 0 unidades
+            // (ver getCriticalStockProducts, backend) — mostrar "0 / 0
+            // unds" en ese caso es confuso (sugiere un umbral real de 0),
+            // así que sin umbral configurado se muestra "Sin stock" en
+            // vez del formato "cantidad / mínimo".
+            const hasThreshold = p.minStock > 0;
+            return (
+              <div
+                key={p.productId}
+                className="flex items-center justify-between gap-3 py-1.5 border-b border-neutral-50 last:border-0"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-neutral-700 truncate">{p.name}</p>
+                  <p className="text-xs text-neutral-400">{p.sku}</p>
+                </div>
+                <span
+                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
+                    isOut ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"
+                  }`}
+                >
+                  {hasThreshold ? `${p.quantity} / ${p.minStock} unds` : "Sin stock"}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => navigate("/inventario?lowStock=true")}
+        className="mt-3 pt-2.5 border-t border-neutral-100 text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center justify-center gap-1"
+      >
+        <TriangleAlert size={14} />
+        Ir a Inventario
+      </button>
     </div>
   );
 
@@ -551,7 +633,7 @@ export default function Dashboard() {
           {statsWidget}
           {salesTimelineWidget}
           <Carousel slides={[topProductsWidget, expensesWidget]} />
-          <Carousel slides={[paymentMethodsWidget, averageTicketWidget]} />
+          <Carousel slides={[paymentMethodsWidget, criticalStockWidget]} />
         </div>
       ) : (
         <div className="space-y-4">
@@ -561,7 +643,7 @@ export default function Dashboard() {
             {topProductsWidget}
             {expensesWidget}
             {paymentMethodsWidget}
-            {averageTicketWidget}
+            {criticalStockWidget}
           </div>
         </div>
       )}

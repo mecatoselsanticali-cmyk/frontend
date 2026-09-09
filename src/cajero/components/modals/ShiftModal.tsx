@@ -23,7 +23,7 @@ function money(n: number) {
   return `$${n.toLocaleString("es-CO")}`;
 }
 
-/** Una fila de una de las dos tablas de desglose (Efectivo / Nequi y Datáfono) — ver `ShiftSummary`. */
+/** Una fila de una de las dos tablas de desglose (Efectivo / Nequi) — ver `ShiftSummary`. */
 function SummaryRow({ label, value, bold }: { label: string; value: number; bold?: boolean }) {
   return (
     <div
@@ -53,9 +53,15 @@ function SummaryRow({ label, value, bold }: { label: string; value: number; bold
  * CLAUDE.md) — fila superior con el total vendido por cada método de
  * pago, y debajo dos columnas de desglose: Efectivo (única con
  * Compras/Gastos, porque son los únicos movimientos que de verdad salen
- * de la gaveta física) y Nequi y Datáfono combinados (informativo — el
- * "Total" de esta columna NO es lo que el cajero declara al cerrar, ver
- * la nota en el JSX de abajo).
+ * de la gaveta física) y Nequi.
+ *
+ * **Ya no incluye Datáfono/CARD** (ver punto 61 de admin-frontend/
+ * CLAUDE.md) — el negocio no recibe pagos con tarjeta, así que se quitó
+ * tanto de la fila superior como de la columna "Nequi y Datáfono" que
+ * existía antes (ahora es solo "Nequi", sin ninguna suma combinada).
+ * `summary.cardTotal` sigue viniendo del backend (turnos viejos con
+ * ventas CARD reales lo calculan bien, ver `computeShiftFinancials`),
+ * simplemente ya no se lee ni se muestra acá.
  */
 function ShiftSummary({
   shiftId,
@@ -89,41 +95,30 @@ function ShiftSummary({
   if (error) return <p className="text-xs text-red-500 mb-4">{error}</p>;
   if (!summary) return null;
 
-  // "Nequi y Datáfono" es una columna puramente informativa (ver el
-  // comentario de arriba de la función) — combina lo vendido por ambos
-  // medios electrónicos para que el cajero/admin vea el total digital de
-  // un vistazo, pero el campo que el cajero realmente declara al cerrar
-  // (`declaredNequi`, más abajo en este mismo modal) y la diferencia que
-  // calcula el backend (`systemCalculatedNequi`) siguen siendo SOLO
-  // Nequi — el dinero de una venta con datáfono nunca entra al saldo de
-  // la app Nequi, así que sumarlo ahí generaría una diferencia que el
-  // cajero jamás podría cuadrar. "Compras Nequi"/"Gastos Nequi" quedan en
-  // $0 siempre en este sistema (las compras y los gastos de caja menor
-  // del cajero solo existen en efectivo, ver `computeShiftFinancials` en
-  // el backend) — se muestran igual, en vez de omitirse, para que la
-  // tabla quede simétrica con la de Efectivo.
-  const nequiAndCardSales = summary.nequiTotal + summary.cardTotal;
-  const nequiAndCardTotal = summary.initialNequi + nequiAndCardSales;
+  // "Compras Nequi"/"Gastos Nequi" quedan en $0 siempre en este sistema
+  // (las compras y los gastos de caja menor del cajero solo existen en
+  // efectivo, ver `computeShiftFinancials` en el backend) — se muestran
+  // igual, en vez de omitirse, para que la tabla quede simétrica con la
+  // de Efectivo.
+  const nequiTotal = summary.initialNequi + summary.nequiTotal;
 
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-semibold text-neutral-700">Resumen del turno</h4>
       <div ref={boxRef} className="rounded-lg overflow-hidden border border-neutral-200">
         {/* Fila superior: total vendido por cada método de pago */}
-        <div className="grid grid-cols-4 text-center text-xs">
+        <div className="grid grid-cols-3 text-center text-xs">
           <div className="bg-green-100 text-green-700 font-semibold py-1.5">Efectivo</div>
           <div className="bg-purple-100 text-purple-700 font-semibold py-1.5">Nequi</div>
-          <div className="bg-blue-100 text-blue-700 font-semibold py-1.5">Datáfono</div>
           <div className="bg-orange-100 text-orange-700 font-semibold py-1.5">Apps</div>
         </div>
-        <div className="grid grid-cols-4 text-center text-xs font-semibold border-b border-neutral-200">
+        <div className="grid grid-cols-3 text-center text-xs font-semibold border-b border-neutral-200">
           <div className="py-2 border-r border-neutral-100">{money(summary.cashSales)}</div>
           <div className="py-2 border-r border-neutral-100">{money(summary.nequiTotal)}</div>
-          <div className="py-2 border-r border-neutral-100">{money(summary.cardTotal)}</div>
           <div className="py-2">{money(summary.appsTotal)}</div>
         </div>
 
-        {/* Dos tablas de desglose: Efectivo / Nequi y Datáfono */}
+        {/* Dos tablas de desglose: Efectivo / Nequi */}
         <div className="grid grid-cols-2 divide-x divide-neutral-200">
           <div>
             <div className="bg-green-50 text-green-700 text-xs font-semibold text-center py-1.5">Efectivo</div>
@@ -134,14 +129,12 @@ function ShiftSummary({
             <SummaryRow label="Total" value={summary.systemCalculatedCash} bold />
           </div>
           <div>
-            <div className="bg-purple-50 text-purple-700 text-xs font-semibold text-center py-1.5">
-              Nequi y Datáfono
-            </div>
+            <div className="bg-purple-50 text-purple-700 text-xs font-semibold text-center py-1.5">Nequi</div>
             <SummaryRow label="Base inicial" value={summary.initialNequi} />
-            <SummaryRow label="Ventas Cuentas" value={nequiAndCardSales} />
+            <SummaryRow label="Ventas Nequi" value={summary.nequiTotal} />
             <SummaryRow label="Compras Nequi" value={0} />
             <SummaryRow label="Gastos Nequi" value={0} />
-            <SummaryRow label="Total" value={nequiAndCardTotal} bold />
+            <SummaryRow label="Total" value={nequiTotal} bold />
           </div>
         </div>
       </div>

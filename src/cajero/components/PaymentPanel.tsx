@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Trash2, Coins, Smartphone, CreditCard, Bike, type LucideIcon } from "lucide-react";
+import { Banknote, Trash2, Coins, Smartphone, Bike, type LucideIcon } from "lucide-react";
 import { usePosStore } from "../store/posStore";
 import { generateLocalTicketId } from "../db/offlineDb";
 import { posApi } from "../services/posApi";
 import SaleReceipt from "./SaleReceipt";
 
+// "CARD" (Datáfono) se quitó de las opciones a propósito — el negocio solo
+// recibe pagos en efectivo, Nequi o por app de domicilios, nunca con
+// datáfono, así que ese botón nunca se usaba (pedido explícito, ver punto
+// 61 de admin-frontend/CLAUDE.md). El tipo sigue incluyendo "CARD" porque
+// `Sale.paymentMethod` en el backend todavía lo acepta como valor histórico
+// (ventas ya registradas antes de este cambio) — solo se quitó de la
+// UI, no del modelo de datos.
 type PaymentMethod = "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP";
 
 const TOPE_CONSUMIDOR_FINAL = 509000;
@@ -12,7 +19,6 @@ const TOPE_CONSUMIDOR_FINAL = 509000;
 const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: LucideIcon }[] = [
   { key: "CASH", label: "Efectivo", icon: Coins },
   { key: "NEQUI", label: "Nequi", icon: Smartphone },
-  { key: "CARD", label: "Datáfono", icon: CreditCard },
   { key: "DELIVERY_APP", label: "App Delivery", icon: Bike },
 ];
 
@@ -174,7 +180,7 @@ export default function PaymentPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-neutral-500 mb-2">Método de pago</h3>
-          <div data-tour="payment-methods" className="grid grid-cols-2 gap-2">
+          <div data-tour="payment-methods" className="grid grid-cols-3 gap-2">
             {PAYMENT_METHODS.map((m) => {
               const Icon = m.icon;
               const active = selectedMethod === m.key;

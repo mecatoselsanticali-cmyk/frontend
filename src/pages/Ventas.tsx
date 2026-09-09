@@ -18,12 +18,15 @@ const statusColors: Record<string, string> = {
 
 // Etiquetas específicas de esta tabla — a propósito NO son las mismas que
 // `paymentMethodLabels` de SaleReceipt.tsx (usadas en el recibo y en los
-// modals de crear/editar venta): acá se pidió explícitamente "Datáfono" en
-// vez de "Tarjeta" y "DIDI" en vez de "App de domicilios".
+// modals de crear/editar venta): acá se pidió explícitamente "DIDI" en vez
+// de "App de domicilios". Ya no incluye "CARD" (Datáfono, ver punto 61 de
+// CLAUDE.md) como opción de filtro — el negocio no recibe pagos con
+// datáfono; una venta vieja con ese método (si existiera) sigue
+// mostrándose en la tabla igual (ver el fallback `|| s.paymentMethod` más
+// abajo), solo ya no se puede filtrar específicamente a esa opción.
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
   NEQUI: "Nequi",
-  CARD: "Datáfono",
   DELIVERY_APP: "DIDI",
 };
 

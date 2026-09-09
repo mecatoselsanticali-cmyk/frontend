@@ -299,16 +299,19 @@ export default function CashClosureDetailModal({
               <div>
                 <h4 className="text-sm font-semibold text-neutral-700 mb-2">Ventas por método de pago</h4>
                 <div className="rounded-lg overflow-hidden border border-neutral-200">
-                  <div className="grid grid-cols-4 text-center text-xs">
+                  {/* Sin columna "Datáfono" a propósito — el negocio no
+                      recibe pagos con tarjeta (ver punto 61 de CLAUDE.md).
+                      `financials.cardTotal` sigue existiendo del lado del
+                      backend (turnos viejos con ventas CARD reales lo
+                      calculan bien), simplemente ya no se muestra acá. */}
+                  <div className="grid grid-cols-3 text-center text-xs">
                     <div className="bg-green-100 text-green-700 font-semibold py-1.5">Efectivo</div>
                     <div className="bg-purple-100 text-purple-700 font-semibold py-1.5">Nequi</div>
-                    <div className="bg-blue-100 text-blue-700 font-semibold py-1.5">Datáfono</div>
                     <div className="bg-orange-100 text-orange-700 font-semibold py-1.5">Apps</div>
                   </div>
-                  <div className="grid grid-cols-4 text-center text-xs font-semibold">
+                  <div className="grid grid-cols-3 text-center text-xs font-semibold">
                     <div className="py-2 border-r border-neutral-100">{money(financials.cashSales)}</div>
                     <div className="py-2 border-r border-neutral-100">{money(financials.nequiTotal)}</div>
-                    <div className="py-2 border-r border-neutral-100">{money(financials.cardTotal)}</div>
                     <div className="py-2">{money(financials.appsTotal)}</div>
                   </div>
                 </div>

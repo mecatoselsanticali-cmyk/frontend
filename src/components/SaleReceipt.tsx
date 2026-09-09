@@ -8,10 +8,17 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
+// "CARD" (Tarjeta) se quitó a propósito — el negocio no recibe pagos con
+// datáfono (ver punto 61 de admin-frontend/CLAUDE.md). Este mapa también
+// alimenta el <select> de método de pago de SaleModal.tsx/
+// SaleEditModal.tsx (ver esos archivos) — quitarlo de acá ya lo saca de
+// ambos formularios, sin tener que tocar ninguno de los dos por separado.
+// Una venta VIEJA con `paymentMethod: "CARD"` (si existiera) sigue
+// mostrándose bien acá abajo gracias al fallback `|| sale.paymentMethod`,
+// solo que con el valor crudo en vez de una etiqueta bonita.
 export const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
   NEQUI: "Nequi",
-  CARD: "Tarjeta",
   DELIVERY_APP: "DIDI",
 };
 

@@ -85,6 +85,16 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
                   {label}
                 </option>
               ))}
+              {/* Red de seguridad para un valor histórico que ya no está en
+                  el mapa (ej. "CARD"/Datáfono, quitado — ver punto 61 de
+                  CLAUDE.md): sin esto, un <select> con un `value` que no
+                  matchea ningún <option> queda mostrando el primero de la
+                  lista sin que el estado de React se entere — parecería que
+                  la venta tiene otro método de pago sin que nadie lo haya
+                  cambiado. */}
+              {!(paymentMethod in paymentMethodLabels) && (
+                <option value={paymentMethod}>{paymentMethod}</option>
+              )}
             </select>
           </div>
 

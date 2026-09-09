@@ -50,6 +50,9 @@ export const adminApi = {
     search?: string;
     includeInactive?: boolean;
     branchId?: string;
+    // Solo productos en/bajo su `minStock` (ver punto 62 de CLAUDE.md) —
+    // usado por el CTA "Ir a Inventario" del widget de Stock Crítico.
+    lowStockOnly?: boolean;
     page?: number;
     pageSize?: number;
   }) => adminHttp.get("/products", { params }).then((r) => r.data),
@@ -61,6 +64,11 @@ export const adminApi = {
     adminHttp.get(`/products/${id}/stock`).then((r) => r.data),
   addProductStock: (id: string, allocations: { branchId: string; quantity: number }[]) =>
     adminHttp.post(`/products/${id}/stock`, { allocations }).then((r) => r.data),
+  // FIJA el stock exacto por sede (a diferencia de addProductStock, que
+  // suma) — solo ADMIN, ver ManagedStockModal.tsx y punto 60 de
+  // admin-frontend/CLAUDE.md.
+  setProductStock: (id: string, allocations: { branchId: string; quantity: number }[]) =>
+    adminHttp.put(`/products/${id}/stock`, { allocations }).then((r) => r.data),
 
   /**
    * Sube la foto de un producto. axios detecta que `formData` es una

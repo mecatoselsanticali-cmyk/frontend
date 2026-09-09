@@ -25,7 +25,6 @@ const emptyForm = {
   initialNequi: "",
   declaredCash: "",
   systemCalculatedCash: "",
-  cardTotal: "",
   nequiTotal: "",
   appsTotal: "",
   pettyCashExpenses: "",
@@ -61,7 +60,6 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
             closure.systemCalculatedCash !== undefined && closure.systemCalculatedCash !== null
               ? String(closure.systemCalculatedCash)
               : "",
-          cardTotal: String(closure.cardTotal ?? ""),
           nequiTotal: String(closure.nequiTotal ?? ""),
           appsTotal: String(closure.appsTotal ?? ""),
           pettyCashExpenses: String(closure.pettyCashExpenses ?? ""),
@@ -115,7 +113,6 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
       initialNequi: form.initialNequi,
       declaredCash: form.declaredCash,
       systemCalculatedCash: form.systemCalculatedCash,
-      cardTotal: form.cardTotal,
       nequiTotal: form.nequiTotal,
       appsTotal: form.appsTotal,
       pettyCashExpenses: form.pettyCashExpenses,
@@ -268,18 +265,14 @@ export default function CashClosureModal({ closure, initialBranchId, onClose, on
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-neutral-500">Total tarjeta</label>
-              <input
-                type="number"
-                min={0}
-                value={form.cardTotal}
-                onChange={(e) => setForm({ ...form, cardTotal: e.target.value })}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
-                placeholder="0"
-              />
-            </div>
+          {/* Sin "Total tarjeta" a propósito — el negocio no recibe pagos
+              con datáfono (ver punto 61 de CLAUDE.md). El backend deja
+              `cardTotal` sin tocar si el campo no viene en el body (ver
+              `updateCashClosureAdmin`), así que editar un cierre viejo con
+              un `cardTotal` histórico real no lo pisa con 0 por no
+              mostrarlo acá — simplemente ya no se puede capturar/corregir
+              desde este formulario. */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-neutral-500">Total Nequi</label>
               <input

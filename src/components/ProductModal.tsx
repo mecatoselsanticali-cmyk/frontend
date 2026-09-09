@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { adminApi } from "../services/api";
 import { Hamburger } from "lucide-react";
+import ManagedStockModal, { StagedAllocation } from "./ManagedStockModal";
 
 interface Modifier {
   name: string;
@@ -21,6 +22,11 @@ const emptyForm = {
   sku: "",
   category: "",
   price: "",
+  // Umbral de stock mínimo para la alerta de "Stock Crítico" del
+  // Dashboard (ver punto 62 de admin-frontend/CLAUDE.md) — "" (vacío) se
+  // manda como 0 al backend, que lo interpreta como "sin monitorear",
+  // nunca como "siempre crítico" (mismo criterio que `Product.minStock`).
+  minStock: "",
   taxType: "INC" as "INC" | "IVA" | "EXENTO",
   taxRate: "0.08",
 };
@@ -43,6 +49,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
           sku: product.sku,
           category: product.category,
           price: String(product.price),
+          minStock: String(product.minStock ?? 0),
           taxType: product.taxType,
           taxRate: String(product.taxRate),
         }
@@ -53,6 +60,20 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
   const [uploadingImage, setUploadingImage] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Inventario inicial (ver punto 60 de admin-frontend/CLAUDE.md) — solo
+  // tiene sentido al CREAR (nunca al editar: un producto existente ya
+  // tiene su propio botón "Gestionar stock" en Inventario.tsx). `null` =
+  // el admin no lo tocó todavía, muestra el link "+ Agregar inventario
+  // inicial"; un array (aunque sea todo ceros) = ya pasó por
+  // `ManagedStockModal` al menos una vez, muestra el resumen en su lugar.
+  // A propósito NO se manda al backend acá — `ManagedStockModal` en modo
+  // "staging" (sin `product._id` real todavía) solo devuelve la elección
+  // por `onStage`, sin tocar el backend; se manda recién en `submit()` de
+  // este archivo, después de que el producto ya se creó y tiene un id
+  // real, para que "crear producto" + "asignar stock inicial" se sientan
+  // como una sola acción del punto de vista del admin.
+  const [stagedAllocations, setStagedAllocations] = useState<StagedAllocation[] | null>(null);
+  const [showStockModal, setShowStockModal] = useState(false);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -105,6 +126,7 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
       ...(isEditing ? { sku: form.sku } : {}),
       category: form.category,
       price: Number(form.price),
+      minStock: Number(form.minStock) || 0,
       imageUrl: imageUrl || undefined,
       modifiers: modifiers.filter((m) => m.name.trim() !== ""),
     };
@@ -113,6 +135,33 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
       const saved = isEditing
         ? await adminApi.updateProduct(product._id, payload)
         : await adminApi.createProduct(payload);
+
+      // Stock inicial elegido antes de crear (ver el estado de arriba) —
+      // recién acá existe un `_id` real al que asignárselo. Solo aplica al
+      // CREAR (isEditing ya descarta esto arriba, pero se repite el check
+      // por claridad) y solo si el admin de verdad asignó algo. Se separa
+      // en su propio try/catch: si esto falla, el producto YA se creó con
+      // éxito — no tiene sentido tratar la creación como fallida, solo
+      // avisar que el stock inicial no se guardó (el admin puede corregirlo
+      // después con "Gestionar stock" desde Inventario.tsx).
+      if (!isEditing && stagedAllocations && stagedAllocations.some((a) => a.quantity > 0)) {
+        try {
+          await adminApi.setProductStock(
+            saved._id,
+            stagedAllocations.map((a) => ({ branchId: a.branchId, quantity: a.quantity }))
+          );
+        } catch (stockErr: any) {
+          setError(
+            `El producto se creó, pero no se pudo guardar el stock inicial: ${
+              stockErr.message || "intenta de nuevo desde Inventario"
+            }`
+          );
+          setSaving(false);
+          onSaved(saved);
+          return;
+        }
+      }
+
       onSaved(saved);
       onClose();
     } catch (err: any) {
@@ -208,6 +257,67 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
                 className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
               />
             </div>
+            <div className="col-span-2">
+              <label className="text-xs text-neutral-500">
+                Stock mínimo (alerta de Stock Crítico, opcional)
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={form.minStock}
+                onChange={(e) => setForm({ ...form, minStock: e.target.value })}
+                placeholder="0 = sin alerta"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+              />
+            </div>
+
+            {/* Inventario inicial — solo al crear (ver punto 60 de
+                admin-frontend/CLAUDE.md). `stagedAllocations` arranca en
+                `null` (nunca se tocó) hasta que el admin pasa por
+                ManagedStockModal al menos una vez, aunque haya dejado todo
+                en 0 — a partir de ahí se muestra el resumen en vez del
+                link, con un botón para reabrir y ajustar. */}
+            {!isEditing && (
+              <div className="col-span-2">
+                {stagedAllocations ? (
+                  <div className="border border-neutral-200 rounded-lg p-3 text-sm space-y-1 mt-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">Inventario inicial</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowStockModal(true)}
+                        className="text-xs text-brand-600 hover:underline"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                    {stagedAllocations.some((a) => a.quantity > 0) ? (
+                      <>
+                        <p className="text-neutral-500">
+                          {stagedAllocations
+                            .filter((a) => a.quantity > 0)
+                            .map((a) => `${a.branchName}: ${a.quantity}`)
+                            .join(" · ")}
+                        </p>
+                        <p className="text-xs text-neutral-400">
+                          Total: {stagedAllocations.reduce((sum, a) => sum + a.quantity, 0)} unidades
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-neutral-400">Sin unidades asignadas todavía</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowStockModal(true)}
+                    className="text-sm text-brand-600 hover:underline"
+                  >
+                    + Agregar inventario inicial
+                  </button>
+                )}
+              </div>
+            )}
             {/**
              * 
             <div>
@@ -300,6 +410,18 @@ export default function ProductModal({ product, onClose, onSaved }: ProductModal
           </div>
         </div>
       </div>
+
+      {showStockModal && (
+        <ManagedStockModal
+          product={{ name: form.name || "nuevo producto" }}
+          initialAllocations={stagedAllocations || undefined}
+          onClose={() => setShowStockModal(false)}
+          onStage={(allocations) => {
+            setStagedAllocations(allocations);
+            setShowStockModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
