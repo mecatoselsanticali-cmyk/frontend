@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../services/api";
+import Swal from "sweetalert2";
 
 interface UserModalProps {
   user?: any; // si viene, el modal edita en vez de crear
@@ -48,16 +49,15 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
       setError("El PIN de cajero debe tener 4 dígitos");
       return;
     }
-    // La contraseña solo es obligatoria al CREAR — al editar, el backend ya
+    // La contraseña ya nunca es obligatoria acá — al editar, el backend
     // trata un password vacío como "no cambiar" (ver adminController.
-    // updateUser: `if (password) doc.password = ...`), así que exigirla de
-    // nuevo en cada edición sería forzar un cambio de contraseña no pedido.
-    if (form.role !== "CASHIER" && (!form.email || (!isEditing && !form.password))) {
-      setError(
-        isEditing
-          ? "El correo es requerido para administrador/gerente"
-          : "Correo y contraseña son requeridos para administrador/gerente"
-      );
+    // updateUser: `if (password) doc.password = ...`); al crear, un
+    // ADMIN/MANAGER nuevo configura su propia contraseña por el link del
+    // correo de bienvenida (ver punto 59 de backend/CLAUDE.md), así que el
+    // campo ni siquiera se muestra en ese caso (ver el formulario más
+    // abajo) — no tiene sentido exigir algo que no se le pide al admin.
+    if (form.role !== "CASHIER" && !form.email) {
+      setError("El correo es requerido para administrador/gerente");
       return;
     }
 
@@ -80,8 +80,16 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
     try {
       if(isEditing) {
         await adminApi.updateUser(user._id, payload);
+        Swal.fire("Usuario actualizado", "Los cambios se guardaron exitosamente.", "success");
       } else {
         await adminApi.createUser(payload);
+        Swal.fire(
+          "Usuario creado",
+          form.role === "CASHIER"
+            ? "El usuario ha sido creado exitosamente."
+            : "El usuario ha sido creado exitosamente. Le enviamos un correo para que configure su contraseña.",
+          "success"
+        );
       }
 
       if (isEditingSelf) {
@@ -192,18 +200,29 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                     className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
                   />
                 </div>
-                <div>
-                  <label className="text-xs text-neutral-500">
-                    Contraseña{isEditing && " (opcional)"}
-                  </label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(e) => setForm({ ...form, password: e.target.value })}
-                    placeholder={isEditing ? "Dejar en blanco para no cambiarla" : ""}
-                    className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
-                  />
-                </div>
+                {isEditing ? (
+                  <div>
+                    <label className="text-xs text-neutral-500">Contraseña (opcional)</label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      placeholder="Dejar en blanco para no cambiarla"
+                      className="w-full border border-neutral-200 rounded-lg p-2 text-sm mt-1"
+                    />
+                  </div>
+                ) : (
+                  // Ya no se le pide contraseña al crear un ADMIN/MANAGER —
+                  // el backend le manda un correo de bienvenida con un link
+                  // seguro de un solo uso para que configure la suya (ver
+                  // punto 59 de backend/CLAUDE.md); pedirle una acá al admin
+                  // que está creando la cuenta ya no tiene sentido, y
+                  // mandarla igual solo la dejaría sin usar en el backend.
+                  <p className="text-xs text-neutral-500 bg-neutral-50 border border-neutral-200 rounded-lg p-2">
+                    Le enviaremos un correo a esta dirección para que configure su propia
+                    contraseña de acceso.
+                  </p>
+                )}
               </>
             )}
           </div>
