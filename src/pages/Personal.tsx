@@ -3,6 +3,7 @@ import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
 import DataTable from "../components/DataTable";
 import UserModal from "../components/UserModal";
+import MoreFiltersModal from "../components/MoreFiltersModal";
 import Swal from "sweetalert2";
 import { SquarePen, Trash2 } from "lucide-react";
 
@@ -12,7 +13,25 @@ const roleLabels: Record<string, string> = {
   CASHIER: "Cajero",
 };
 
+// Misma "propia copia chica" que `useIsMobile()` en Dashboard.tsx/
+// Topbar.tsx/CashierLayout.tsx — no hay un hook compartido para esto en
+// el proyecto (ver punto 36 de CLAUDE.md). Acá decide el `pageSize` de la
+// paginación: 5 filas por página en celular en vez de las 20 de
+// escritorio, para que "Anterior"/"Siguiente" no obligue a hacer scroll
+// vertical largo en una pantalla angosta.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function Personal() {
+  const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch(); // filtro de la tabla (barra superior)
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +45,11 @@ export default function Personal() {
   const [search, setSearch] = useState("");
   const [role, setRole] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const pageSize = 20;
+  // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
+  // — solo `search` queda visible fuera del modal; "Rol"/"Mostrar
+  // inactivos" viven adentro.
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
+  const pageSize = isMobile ? 5 : 20;
 
   // Para ocultar el botón de "eliminar" en la propia fila del admin
   // logueado — no puede desactivar su propia cuenta (ver adminController.updateUser).
@@ -56,7 +79,7 @@ export default function Personal() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [selectedBranch, showInactive, role, search, page]);
+  useEffect(load, [selectedBranch, showInactive, role, search, page, isMobile]);
 
   // Cambiar de sede, rol, búsqueda o el filtro de inactivos debe volver a
   // la página 1 — si no, se podría quedar en una página que ya no existe
@@ -113,30 +136,101 @@ export default function Personal() {
           }
         };
 
+  const extraFiltersCount = [role, showInactive].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-4">
-          <h3 className="text-neutral-500 text-sm">Empleados y administradores</h3>
-          <input
-            placeholder="Buscar por nombre o correo..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-64"
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+      {!isMobile && (
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <h3 className="text-neutral-500 text-sm">Empleados y administradores</h3>
+            <input
+              placeholder="Buscar por nombre o correo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-64"
+            />
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Rol: todos</option>
+              {Object.entries(roleLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-neutral-500">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+              />
+              Mostrar inactivos
+            </label>
+          </div>
+          <button
+            onClick={openCreate}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
           >
-            <option value="">Rol: todos</option>
-            {Object.entries(roleLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <label className="flex items-center gap-2 text-sm text-neutral-500">
+            + Nuevo usuario
+          </button>
+        </div>
+      )}
+
+      {/* Vista de celular (ver punto 63 de CLAUDE.md) — solo el buscador
+          queda visible junto al botón "Más filtros"; "Rol"/"Mostrar
+          inactivos" viven en el modal. */}
+      {isMobile && (
+        <>
+          <div className="flex gap-2">
+            <input
+              placeholder="Buscar por nombre o correo..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => setFiltersModalOpen(true)}
+              className="relative shrink-0 px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            >
+              Más filtros
+              {extraFiltersCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {extraFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <button
+            onClick={openCreate}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full"
+          >
+            + Nuevo usuario
+          </button>
+        </>
+      )}
+
+      {filtersModalOpen && (
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Rol</label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              {Object.entries(roleLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={showInactive}
@@ -144,14 +238,8 @@ export default function Personal() {
             />
             Mostrar inactivos
           </label>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
-        >
-          + Nuevo usuario
-        </button>
-      </div>
+        </MoreFiltersModal>
+      )}
 
       <DataTable
         loading={loading}

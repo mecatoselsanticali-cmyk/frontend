@@ -98,7 +98,7 @@ function StatCard({ label, value, valueClassName = "text-neutral-800", isMobile 
   return (
     <div className="bg-white rounded-xl border border-neutral-100 p-5">
       <h3 className="text-sm text-neutral-500 mb-1">{label}</h3>
-      <p className={`${isMobile ? "text-xl" : "text-2xl"} font-bold ${valueClassName}`}>{value}</p>
+      <p className={`${isMobile ? "text-lg" : "text-2xl"} font-bold ${valueClassName}`}>{value}</p>
     </div>
   );
 }

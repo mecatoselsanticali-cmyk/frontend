@@ -6,6 +6,7 @@ import DataTable from "../components/DataTable";
 import ExpenseModal from "../components/ExpenseModal";
 import ExpenseEditModal from "../components/ExpenseEditModal";
 import ActionsMenu from "../components/ActionsMenu";
+import MoreFiltersModal from "../components/MoreFiltersModal";
 import { formatDateTime } from "../utils/timezone";
 
 const categoryLabels: Record<string, string> = {
@@ -16,7 +17,25 @@ const categoryLabels: Record<string, string> = {
   OTRO: "Otro",
 };
 
+// Misma "propia copia chica" que `useIsMobile()` en Dashboard.tsx/
+// Topbar.tsx/CashierLayout.tsx — no hay un hook compartido para esto en
+// el proyecto (ver punto 36 de CLAUDE.md). Acá decide el `pageSize` de la
+// paginación: 5 filas por página en celular en vez de las 12/20 de
+// escritorio, para que "Anterior"/"Siguiente" no obligue a hacer scroll
+// vertical largo en una pantalla angosta.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function Gastos() {
+  const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +43,15 @@ export default function Gastos() {
   const [date, setDate] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<any>(null);
+  // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
+  // — esta página no tiene buscador de texto, así que en celular no queda
+  // NINGÚN filtro visible fuera del modal, solo el botón que lo abre.
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 20;
+  const pageSize = isMobile ? 5 : 12;
 
   const load = () => {
     setLoading(true);
@@ -53,7 +76,7 @@ export default function Gastos() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [selectedBranch, category, date, page]);
+  useEffect(load, [selectedBranch, category, date, page, isMobile]);
 
   // Cambiar de sede, categoría o fecha debe volver a la página 1 — si no,
   // se podría quedar en una página que ya no existe para el nuevo filtro.
@@ -95,39 +118,102 @@ export default function Gastos() {
     }
   };
 
+  const extraFiltersCount = [category, date].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-4">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Todas las categorías</option>
-            <option value="PETTY_CASH">Caja menor</option>
-            <option value="ARRIENDO">Arriendo</option>
-            <option value="NOMINA">Nómina</option>
-            <option value="SERVICIOS_PUBLICOS">Servicios públicos</option>
-            <option value="OTRO">Otro</option>
-          </select>
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          />
-          <div className="text-sm text-neutral-500">
-            Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
+      {!isMobile && (
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todas las categorías</option>
+              <option value="PETTY_CASH">Caja menor</option>
+              <option value="ARRIENDO">Arriendo</option>
+              <option value="NOMINA">Nómina</option>
+              <option value="SERVICIOS_PUBLICOS">Servicios públicos</option>
+              <option value="OTRO">Otro</option>
+            </select>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <div className="text-sm text-neutral-500">
+              Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
+            </div>
           </div>
+          <button
+            onClick={openModal}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
+          >
+            + Nuevo gasto
+          </button>
         </div>
-        <button
-          onClick={openModal}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
-        >
-          + Nuevo gasto
-        </button>
-      </div>
+      )}
+
+      {/* Vista de celular (ver punto 63 de CLAUDE.md) — esta página no
+          tiene buscador de texto, así que acá no queda ningún filtro
+          visible, solo el botón que abre el modal con los dos. */}
+      {isMobile && (
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="text-sm text-neutral-500">
+              Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
+            </div>
+            <button
+              onClick={() => setFiltersModalOpen(true)}
+              className="relative shrink-0 px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            >
+              Filtros
+              {extraFiltersCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {extraFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <button
+            onClick={openModal}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full"
+          >
+            + Nuevo gasto
+          </button>
+        </div>
+      )}
+
+      {filtersModalOpen && (
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Categoría</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todas las categorías</option>
+              <option value="PETTY_CASH">Caja menor</option>
+              <option value="ARRIENDO">Arriendo</option>
+              <option value="NOMINA">Nómina</option>
+              <option value="SERVICIOS_PUBLICOS">Servicios públicos</option>
+              <option value="OTRO">Otro</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Fecha</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+        </MoreFiltersModal>
+      )}
 
       <DataTable
         loading={loading}

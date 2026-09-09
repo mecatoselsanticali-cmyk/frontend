@@ -5,25 +5,48 @@ import { useSelectedBranch } from "../layout/Layout";
 import FinanzasTabs from "../components/FinanzasTabs";
 import CashClosureModal from "../components/CashClosureModal";
 import CashClosureDetailModal from "../components/CashClosureDetailModal";
+import MoreFiltersModal from "../components/MoreFiltersModal";
 import ActionsMenu from "../components/ActionsMenu";
 import { formatDateTime } from "../utils/timezone";
 
 const money = (n?: number) => (n === undefined || n === null ? "—" : `$${n.toLocaleString("es-CO")}`);
 
+// Misma "propia copia chica" que `useIsMobile()` en Dashboard.tsx/
+// Topbar.tsx/CashierLayout.tsx — no hay un hook compartido para esto en
+// el proyecto (ver punto 36 de CLAUDE.md). Acá decide el `pageSize` de la
+// paginación: 5 filas por página en celular en vez de las 11 de
+// escritorio, para que "Anterior"/"Siguiente" no obligue a hacer scroll
+// vertical largo en una pantalla angosta.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function FinanzasCaja() {
+  const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch();
   const [closures, setClosures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingClosure, setEditingClosure] = useState<any>(null);
   const [viewingClosureId, setViewingClosureId] = useState<string | null>(null);
+  // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
+  // — esta página no tiene buscador de texto, así que en celular no queda
+  // NINGÚN filtro visible fuera del modal, solo el botón que lo abre.
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [date, setDate] = useState("");
   const [cashierId, setCashierId] = useState("");
   const [cashierOptions, setCashierOptions] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 11;
+  const pageSize = isMobile ? 4 : 11;
 
   const load = () => {
     setLoading(true);
@@ -45,7 +68,7 @@ export default function FinanzasCaja() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [selectedBranch, date, cashierId, page]);
+  useEffect(load, [selectedBranch, date, cashierId, page, isMobile]);
 
   useEffect(() => {
     setPage(1);
@@ -92,6 +115,8 @@ export default function FinanzasCaja() {
       Swal.fire({ title: "Error", text: err.message || "No se pudo eliminar el registro", icon: "error" });
     }
   };
+
+  const extraFiltersCount = [date, cashierId].filter(Boolean).length;
 
   return (
     <div className="space-y-4">

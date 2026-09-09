@@ -4,6 +4,7 @@ import { adminApi } from "../services/api";
 import ProductModal from "../components/ProductModal";
 import StockModal from "../components/StockModal";
 import ManagedStockModal from "../components/ManagedStockModal";
+import MoreFiltersModal from "../components/MoreFiltersModal";
 import Swal from "sweetalert2";
 import { Hamburger, LayersPlus, ShieldCheck, SquarePen, Trash, Trash2, Warehouse } from "lucide-react";
 import { useSelectedBranch } from "../layout/Layout";
@@ -41,7 +42,25 @@ function IconTooltipButton({
   );
 }
 
+// Misma "propia copia chica" que `useIsMobile()` en Dashboard.tsx/
+// Topbar.tsx/CashierLayout.tsx — no hay un hook compartido para esto en
+// el proyecto (ver punto 36 de CLAUDE.md). Acá decide el `pageSize` de la
+// paginación: 5 filas por página en celular en vez de las 20 de
+// escritorio, para que "Anterior"/"Siguiente" no obligue a hacer scroll
+// vertical largo en una pantalla angosta.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function Inventario() {
+  const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch();
   const { admin } = useAuthSession();
   // Gestión directa de stock (ManagedStockModal, ver punto 60 de
@@ -69,10 +88,14 @@ export default function Inventario() {
   const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("lowStock") === "true");
   const [stockProduct, setStockProduct] = useState<any>(null);
   const [managedStockProduct, setManagedStockProduct] = useState<any>(null);
+  // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
+  // — solo `search` queda visible fuera del modal; "Mostrar inactivos"/
+  // "Solo stock bajo" viven adentro.
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = 20;
+  const pageSize = isMobile ? 5 : 20;
 
   const load = () => {
     setLoading(true);
@@ -96,7 +119,7 @@ export default function Inventario() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [search, showInactive, lowStockOnly, selectedBranch, page]);
+  useEffect(load, [search, showInactive, lowStockOnly, selectedBranch, page, isMobile]);
 
   // Cambiar de filtro (búsqueda, inactivos, stock bajo, o sede) debe
   // volver a la página 1 — si no, se podría quedar en una página que ya
@@ -153,17 +176,81 @@ export default function Inventario() {
     }
   };
 
+  const extraFiltersCount = [showInactive, lowStockOnly].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-4">
-          <input
-            placeholder="Buscar por nombre o SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-72"
-          />
-          <label className="flex items-center gap-2 text-sm text-neutral-500">
+      {!isMobile && (
+        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            <input
+              placeholder="Buscar por nombre o SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-full sm:w-72"
+            />
+            <label className="flex items-center gap-2 text-sm text-neutral-500">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+              />
+              Mostrar inactivos
+            </label>
+            <label className="flex items-center gap-2 text-sm text-neutral-500">
+              <input
+                type="checkbox"
+                checked={lowStockOnly}
+                onChange={(e) => setLowStockOnly(e.target.checked)}
+              />
+              Solo stock bajo
+            </label>
+          </div>
+          <button
+            onClick={openCreate}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto"
+          >
+            + Nuevo producto
+          </button>
+        </div>
+      )}
+
+      {/* Vista de celular (ver punto 63 de CLAUDE.md) — solo el buscador
+          queda visible junto al botón "Más filtros"; los dos checkboxes
+          viven en el modal. */}
+      {isMobile && (
+        <>
+          <div className="flex gap-2">
+            <input
+              placeholder="Buscar por nombre o SKU..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => setFiltersModalOpen(true)}
+              className="relative shrink-0 px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            >
+              Más filtros
+              {extraFiltersCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {extraFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <button
+            onClick={openCreate}
+            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full"
+          >
+            + Nuevo producto
+          </button>
+        </>
+      )}
+
+      {filtersModalOpen && (
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={showInactive}
@@ -171,7 +258,7 @@ export default function Inventario() {
             />
             Mostrar inactivos
           </label>
-          <label className="flex items-center gap-2 text-sm text-neutral-500">
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
             <input
               type="checkbox"
               checked={lowStockOnly}
@@ -179,14 +266,8 @@ export default function Inventario() {
             />
             Solo stock bajo
           </label>
-        </div>
-        <button
-          onClick={openCreate}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto"
-        >
-          + Nuevo producto
-        </button>
-      </div>
+        </MoreFiltersModal>
+      )}
 
       <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
         <div className="overflow-x-auto">

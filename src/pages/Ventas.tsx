@@ -7,6 +7,7 @@ import SaleEditModal from "../components/SaleEditModal";
 import SaleReceipt from "../components/SaleReceipt";
 import ActionsMenu from "../components/ActionsMenu";
 import PendingDidiPaymentsModal from "../components/PendingDidiPaymentsModal";
+import MoreFiltersModal from "../components/MoreFiltersModal";
 import { formatDateTime, todayColombia, dayOfWeekForDateString } from "../utils/timezone";
 
 const statusColors: Record<string, string> = {
@@ -39,7 +40,25 @@ const categoryTabs: { value: "" | "REGULAR" | "SPECIAL"; label: string }[] = [
   { value: "SPECIAL", label: "Especial" },
 ];
 
+// Misma "propia copia chica" que `useIsMobile()` en Dashboard.tsx/
+// Topbar.tsx/CashierLayout.tsx — no hay un hook compartido para esto en
+// el proyecto (ver punto 36 de CLAUDE.md). Acá decide el `pageSize` de la
+// paginación: 5 filas por página en celular en vez de las 12 de
+// escritorio, para que "Anterior"/"Siguiente" no obligue a hacer scroll
+// vertical largo en una pantalla angosta.
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
+  useEffect(() => {
+    const mql = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
+
 export default function Ventas() {
+  const isMobile = useIsMobile();
   const [selectedBranch] = useSelectedBranch();
   const [sales, setSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +79,10 @@ export default function Ventas() {
   // tabla + un filtro que la forzaba a solo DELIVERY_APP pendientes —
   // pedido explícito de sacar eso de acá, se veía recargado.
   const [pendingModalOpen, setPendingModalOpen] = useState(false);
+  // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
+  // — solo `search` queda visible fuera del modal; todo lo demás (fecha,
+  // usuario, método de pago, estado DIAN, categoría) vive adentro.
+  const [filtersModalOpen, setFiltersModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -71,7 +94,7 @@ export default function Ventas() {
   // confirmación (individual o en bloque) la deja al día sin necesitar su
   // propio efecto aparte.
   const [pendingDidiCount, setPendingDidiCount] = useState(0);
-  const pageSize = 12;
+  const pageSize = isMobile ? 4 : 12;
 
   const load = () => {
     setLoading(true);
@@ -114,7 +137,7 @@ export default function Ventas() {
       .catch(() => setPendingDidiCount(0));
   };
 
-  useEffect(load, [selectedBranch, dianStatus, category, paymentMethod, cashierId, search, date, page]);
+  useEffect(load, [selectedBranch, dianStatus, category, paymentMethod, cashierId, search, date, page, isMobile]);
 
   // Cambiar de sede/filtro/categoría debe volver a la página 1 — si no, se
   // podría quedar en una página que ya no existe para el nuevo filtro.
@@ -210,6 +233,12 @@ export default function Ventas() {
     }
   }, [isWednesdayInBogota, pendingDidiCount]);
 
+  // Cuántos de los filtros que viven DENTRO del modal "Más filtros" (todos
+  // menos `search`, ver más abajo) están activos — se muestra como badge
+  // en el botón para que un admin en celular sepa que hay filtros
+  // aplicados sin tener que abrir el modal a mirar.
+  const extraFiltersCount = [date, cashierId, paymentMethod, dianStatus, category].filter(Boolean).length;
+
   return (
     <div className="space-y-4">
       {showWednesdayBanner && (
@@ -230,94 +259,218 @@ export default function Ventas() {
         </div>
       )}
 
-      <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
-        {categoryTabs.map((tab) => (
-          <button
-            key={tab.value}
-            onClick={() => setCategory(tab.value)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              category === tab.value
-                ? "bg-white text-neutral-800 shadow-sm"
-                : "text-neutral-500 hover:text-neutral-700"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-3">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por CUFE o ID..."
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-56"
-          />
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          />
-          <select
-            value={cashierId}
-            onChange={(e) => setCashierId(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Usuario: todos</option>
-            {cashierOptions.map((u) => (
-              <option key={u._id} value={u._id}>
-                {u.name}
-              </option>
+      {!isMobile && (
+        <>
+          <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
+            {categoryTabs.map((tab) => (
+              <button
+                key={tab.value}
+                onClick={() => setCategory(tab.value)}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  category === tab.value
+                    ? "bg-white text-neutral-800 shadow-sm"
+                    : "text-neutral-500 hover:text-neutral-700"
+                }`}
+              >
+                {tab.label}
+              </button>
             ))}
-          </select>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Método de pago: todos</option>
-            {Object.entries(paymentMethodLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {/* Abre el modal dedicado de pendientes DiDi/Rappi (ver punto 53
-              de CLAUDE.md) — ya no es un filtro que reescribe esta tabla,
-              es una acción que abre `PendingDidiPaymentsModal` con su
-              propia lista/selección/confirmación. */}
-          <button
-            onClick={() => setPendingModalOpen(true)}
-            className="px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
-          >
-            Pendientes DiDi/Rappi
-          </button>
-          <select
-            value={dianStatus}
-            onChange={(e) => setDianStatus(e.target.value)}
-            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
-          >
-            <option value="">Estado DIAN: todos</option>
-            <option value="PENDING">Pendiente</option>
-            <option value="SENT">Enviado</option>
-            <option value="APPROVED">Aprobado</option>
-            <option value="REJECTED">Rechazado</option>
-          </select>
-        </div>
-        <div className="flex flex-col items-start gap-3 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-          <div className="text-sm text-neutral-500">
-            Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
           </div>
-          <button
-            onClick={() => setModalOpen(true)}
-            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
-          >
-            + Agregar venta
-          </button>
-        </div>
-      </div>
+
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por CUFE o ID..."
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm w-56"
+              />
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              />
+              <select
+                value={cashierId}
+                onChange={(e) => setCashierId(e.target.value)}
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Usuario: todos</option>
+                {cashierOptions.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Método de pago: todos</option>
+                {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {/* Abre el modal dedicado de pendientes DiDi/Rappi (ver punto 53
+                  de CLAUDE.md) — ya no es un filtro que reescribe esta tabla,
+                  es una acción que abre `PendingDidiPaymentsModal` con su
+                  propia lista/selección/confirmación. */}
+              <button
+                onClick={() => setPendingModalOpen(true)}
+                className="px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+              >
+                Pendientes DiDi/Rappi
+              </button>
+              <select
+                value={dianStatus}
+                onChange={(e) => setDianStatus(e.target.value)}
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="">Estado DIAN: todos</option>
+                <option value="PENDING">Pendiente</option>
+                <option value="SENT">Enviado</option>
+                <option value="APPROVED">Aprobado</option>
+                <option value="REJECTED">Rechazado</option>
+              </select>
+            </div>
+            <div className="flex flex-col items-start gap-3 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+              <div className="text-sm text-neutral-500">
+                Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
+              </div>
+              <button
+                onClick={() => setModalOpen(true)}
+                className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
+              >
+                + Agregar venta
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Vista de celular (ver punto 63 de CLAUDE.md) — solo el buscador
+          queda visible junto al botón "Más filtros"; categoría, fecha,
+          usuario, método de pago y estado DIAN viven en el modal. */}
+      {isMobile && (
+        <>
+          <div className="flex gap-2">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar por CUFE o ID..."
+              className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+            <button
+              onClick={() => setFiltersModalOpen(true)}
+              className="relative shrink-0 px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            >
+              Más filtros
+              {extraFiltersCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                  {extraFiltersCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="text-sm text-neutral-500">
+              Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
+            </div>
+            <button
+              onClick={() => setPendingModalOpen(true)}
+              className="w-full px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+            >
+              Pendientes DiDi/Rappi
+            </button>
+            <button
+              onClick={() => setModalOpen(true)}
+              className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full"
+            >
+              + Agregar venta
+            </button>
+          </div>
+        </>
+      )}
+
+      {filtersModalOpen && (
+        <MoreFiltersModal onClose={() => setFiltersModalOpen(false)}>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Categoría</label>
+            <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
+              {categoryTabs.map((tab) => (
+                <button
+                  key={tab.value}
+                  onClick={() => setCategory(tab.value)}
+                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    category === tab.value
+                      ? "bg-white text-neutral-800 shadow-sm"
+                      : "text-neutral-500 hover:text-neutral-700"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Fecha</label>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Usuario</label>
+            <select
+              value={cashierId}
+              onChange={(e) => setCashierId(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              {cashierOptions.map((u) => (
+                <option key={u._id} value={u._id}>
+                  {u.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Método de pago</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-neutral-500 mb-1 block">Estado DIAN</label>
+            <select
+              value={dianStatus}
+              onChange={(e) => setDianStatus(e.target.value)}
+              className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+            >
+              <option value="">Todos</option>
+              <option value="PENDING">Pendiente</option>
+              <option value="SENT">Enviado</option>
+              <option value="APPROVED">Aprobado</option>
+              <option value="REJECTED">Rechazado</option>
+            </select>
+          </div>
+        </MoreFiltersModal>
+      )}
 
       <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
         <div className="overflow-x-auto">
