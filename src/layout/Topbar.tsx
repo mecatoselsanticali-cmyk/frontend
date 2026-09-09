@@ -5,6 +5,16 @@ import { Menu } from "lucide-react";
 // (768px) — hook local, mismo criterio de "cada archivo mantiene su
 // propia copia chica" que `useIsMobile()` en Dashboard.tsx/
 // CashierLayout.tsx, no hay un hook compartido para esto en el proyecto.
+// Nombres reales de sede son largos ("Mecatos el Santi — Sede Centro") y,
+// igual que "Todas las sedes" (ver comentario más abajo), el texto de un
+// <option> no se puede acortar con CSS — en celular se muestra solo la
+// última palabra ("Centro"), suficiente para distinguir sedes entre sí
+// sin repetir el nombre completo del negocio en cada opción.
+function lastWord(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1] || name;
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   useEffect(() => {
@@ -61,19 +71,18 @@ export default function Topbar({
           data-tour="branch-selector"
           value={selectedBranch}
           onChange={(e) => onBranchChange(e.target.value)}
-          className={`${isMobile ? "w-24" : "w-48"
-          } border border-neutral-200 rounded-lg px-3 py-2 text-sm`}
+          className="max-w-auto border border-neutral-200 rounded-lg px-3 py-2 text-sm"
         >
           {/* "Todas las sedes" (el texto real de un <option> no se puede
               acortar solo con CSS/clases responsive — un select nativo
               siempre pinta el texto tal cual) empujaba el título de la
               página fuera de la vista en celular, donde el header ya
               comparte espacio con el botón de hamburguesa. Se acorta a
-              "Sedes" por debajo de 768px. */}
-          <option value="">{isMobile ? "Sedes" : "Todas las sedes"}</option>
+              "Todas" por debajo de 768px. */}
+          <option value="">{isMobile ? "Todas" : "Todas las sedes"}</option>
           {branches.map((b) => (
             <option key={b._id} value={b._id}>
-              {b.name}
+              {isMobile ? lastWord(b.name) : b.name}
             </option>
           ))}
         </select>
