@@ -61,7 +61,8 @@ export default function Topbar({
           data-tour="branch-selector"
           value={selectedBranch}
           onChange={(e) => onBranchChange(e.target.value)}
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm"
+          className={`${isMobile ? "w-24" : "w-48"
+          } border border-neutral-200 rounded-lg px-3 py-2 text-sm`}
         >
           {/* "Todas las sedes" (el texto real de un <option> no se puede
               acortar solo con CSS/clases responsive — un select nativo

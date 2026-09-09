@@ -79,7 +79,8 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<RouteLoadingFallback />}>
           <Routes>
-            <Route path="/login" element={<Login />} />
+            {/** 
+            <Route path="/login" element={<Login />} />*/}
             <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Área Administrador */}
@@ -134,7 +135,7 @@ export default function App() {
               <Route path="compras" element={<ComprasCajero />} />
             </Route>
 
-            <Route path="/" element={<RootRedirect />} />
+            <Route path="/" element={<Login />} />
             <Route path="*" element={<RootRedirect />} />
           </Routes>
         </Suspense>
