@@ -200,7 +200,7 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Correo"
-                className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-3 text-base text-white placeholder:text-neutral-500 transition-colors"
                 required
               />
             </div>
@@ -212,7 +212,7 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Contraseña"
-                className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-9 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-9 text-base text-white placeholder:text-neutral-500 transition-colors"
                 required
               />
               <button
@@ -279,7 +279,7 @@ export default function Login() {
                   value={forgotEmail}
                   onChange={(e) => setForgotEmail(e.target.value)}
                   placeholder="Correo"
-                  className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-3 text-sm text-white placeholder:text-neutral-500 transition-colors"
+                  className="w-full bg-neutral-800/60 border border-white/10 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/30 outline-none rounded-xl py-2.5 pl-9 pr-3 text-base text-white placeholder:text-neutral-500 transition-colors"
                   required
                 />
               </div>
