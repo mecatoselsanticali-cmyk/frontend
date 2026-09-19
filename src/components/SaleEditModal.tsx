@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { adminApi } from "../services/api";
-import { paymentMethodLabels } from "./SaleReceipt";
+import { activePaymentMethods } from "./SaleReceipt";
 
 interface SaleEditModalProps {
   sale: any;
@@ -73,31 +73,11 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
             productos y montos de una venta ya registrada no se pueden modificar.
           </p>
 
-          <div>
-            <label className="text-xs text-neutral-500">Método de pago</label>
-            <select
-              value={paymentMethod}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
-            >
-              {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-              {/* Red de seguridad para un valor histórico que ya no está en
-                  el mapa (ej. "CARD"/Datáfono, quitado — ver punto 61 de
-                  CLAUDE.md): sin esto, un <select> con un `value` que no
-                  matchea ningún <option> queda mostrando el primero de la
-                  lista sin que el estado de React se entere — parecería que
-                  la venta tiene otro método de pago sin que nadie lo haya
-                  cambiado. */}
-              {!(paymentMethod in paymentMethodLabels) && (
-                <option value={paymentMethod}>{paymentMethod}</option>
-              )}
-            </select>
-          </div>
-
+          {/* Canal ARRIBA del método de pago a propósito: Rappi/DiDi fuerza
+              Bancolombia server-side (ver resolvePaymentMethodForChannel,
+              punto 34 de backend/CLAUDE.md), así que hace falta saber el
+              canal elegido antes de decidir si se muestra el selector de
+              método o el aviso de que está bloqueado. */}
           <div>
             <label className="text-xs text-neutral-500">Canal</label>
             <select
@@ -112,6 +92,38 @@ export default function SaleEditModal({ sale, onClose, onSaved }: SaleEditModalP
               ))}
             </select>
           </div>
+
+          {orderType === "DIDI" || orderType === "RAPPI" ? (
+            <p className="text-xs text-brand-700 bg-brand-50 rounded-lg p-2">
+              Método de pago bloqueado en Bancolombia, pendiente de liquidar (Cuenta por Cobrar) — el canal
+              elegido lo fuerza.
+            </p>
+          ) : (
+            <div>
+              <label className="text-xs text-neutral-500">Método de pago</label>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+              >
+                {Object.entries(activePaymentMethods).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+                {/* Red de seguridad para un valor histórico que ya no está
+                    en el mapa (ej. "CARD"/"CASH"/"DELIVERY_APP", ver punto
+                    34 de backend/CLAUDE.md): sin esto, un <select> con un
+                    `value` que no matchea ningún <option> queda mostrando
+                    el primero de la lista sin que el estado de React se
+                    entere — parecería que la venta tiene otro método de
+                    pago sin que nadie lo haya cambiado. */}
+                {!(paymentMethod in activePaymentMethods) && (
+                  <option value={paymentMethod}>{paymentMethod}</option>
+                )}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="text-xs text-neutral-500">Categoría</label>

@@ -70,6 +70,17 @@ export const adminApi = {
   setProductStock: (id: string, allocations: { branchId: string; quantity: number }[]) =>
     adminHttp.put(`/products/${id}/stock`, { allocations }).then((r) => r.data),
 
+  // Grilla producto x sede completa para el modal "Carga Masiva"
+  // (BulkStockModal.tsx) — solo ADMIN, ver ese componente y el punto
+  // "Carga Masiva" de backend/CLAUDE.md.
+  getStockMatrix: (): Promise<{
+    products: { _id: string; name: string; sku: string }[];
+    branches: { _id: string; name: string }[];
+    stock: Record<string, Record<string, number>>;
+  }> => adminHttp.get("/products/stock/matrix").then((r) => r.data),
+  bulkSetProductStock: (updates: { productId: string; branchId: string; quantity: number }[]) =>
+    adminHttp.put("/products/stock/bulk", { updates }).then((r) => r.data),
+
   /**
    * Sube la foto de un producto. axios detecta que `formData` es una
    * instancia de FormData y arma el `Content-Type: multipart/form-data;
@@ -111,6 +122,7 @@ export const adminApi = {
     branchId: string;
     items: { productId: string; quantity: number }[];
     paymentMethod: string;
+    orderType?: string;
     customer?: { name?: string; document?: string; email?: string };
   }) => adminHttp.post("/sales", data).then((r) => r.data),
   updateSale: (

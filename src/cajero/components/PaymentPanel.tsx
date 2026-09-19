@@ -1,25 +1,32 @@
 import { useEffect, useRef, useState } from "react";
-import { Banknote, Trash2, Coins, Smartphone, Bike, type LucideIcon } from "lucide-react";
+import { Banknote, Trash2, Coins, type LucideIcon } from "lucide-react";
 import { usePosStore } from "../store/posStore";
 import { generateLocalTicketId } from "../db/offlineDb";
 import { posApi } from "../services/posApi";
 import SaleReceipt from "./SaleReceipt";
+import OrderSummary from "./OrderSummary";
 
 // "CARD" (Datáfono) se quitó de las opciones a propósito — el negocio solo
-// recibe pagos en efectivo, Nequi o por app de domicilios, nunca con
-// datáfono, así que ese botón nunca se usaba (pedido explícito, ver punto
-// 61 de admin-frontend/CLAUDE.md). El tipo sigue incluyendo "CARD" porque
-// `Sale.paymentMethod` en el backend todavía lo acepta como valor histórico
-// (ventas ya registradas antes de este cambio) — solo se quitó de la
-// UI, no del modelo de datos.
-type PaymentMethod = "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP";
+// recibe pagos en efectivo, Nequi o Bancolombia, nunca con datáfono, así
+// que ese botón nunca se usaba (pedido explícito, ver punto 61 de
+// admin-frontend/CLAUDE.md). El tipo sigue incluyendo "CARD"/"CASH"/
+// "DELIVERY_APP" porque `Sale.paymentMethod` en el backend todavía los
+// acepta como valores históricos (ventas ya registradas antes de este
+// cambio) — solo se quitaron de la UI, no del modelo de datos. Ver punto
+// 34 de backend/CLAUDE.md para el detalle completo del refactor
+// método-de-pago vs. canal.
+type PaymentMethod = "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP" | "EFECTIVO" | "BANCOLOMBIA";
 
 const TOPE_CONSUMIDOR_FINAL = 509000;
 
-const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon: LucideIcon }[] = [
-  { key: "CASH", label: "Efectivo", icon: Coins },
-  { key: "NEQUI", label: "Nequi", icon: Smartphone },
-  { key: "DELIVERY_APP", label: "App Delivery", icon: Bike },
+// Nequi/Bancolombia usan su logo real (public/img/) en vez de un ícono
+// genérico de Lucide — a diferencia de Efectivo (sin marca propia que
+// mostrar), estos dos SÍ tienen un logo reconocible que el cajero ya
+// asocia con el método.
+const PAYMENT_METHODS: { key: PaymentMethod; label: string; icon?: LucideIcon; iconSrc?: string }[] = [
+  { key: "EFECTIVO", label: "Efectivo", icon: Coins },
+  { key: "NEQUI", label: "Nequi", iconSrc: "/img/nequi.webp" },
+  { key: "BANCOLOMBIA", label: "Bancolombia", iconSrc: "/img/bancolombia.svg" },
 ];
 
 export default function PaymentPanel() {
@@ -31,6 +38,12 @@ export default function PaymentPanel() {
   const cashierName = usePosStore((s) => s.cashierName);
 
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  // "Pedido DiDi" — canal, no método de pago (ver punto 34 de
+  // backend/CLAUDE.md). Encendido fuerza/bloquea el método a Bancolombia
+  // (el backend igual lo fuerza server-side vía
+  // resolvePaymentMethodForChannel, esto es solo para que la UI no
+  // prometa algo distinto de lo que en realidad va a quedar guardado).
+  const [isDidi, setIsDidi] = useState(false);
   const [cashReceived, setCashReceived] = useState("");
   const [processing, setProcessing] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
@@ -125,7 +138,7 @@ export default function PaymentPanel() {
         subtotal: l.subtotal,
       })),
       paymentMethod: selectedMethod,
-      orderType: "POS_COUNTER",
+      orderType: isDidi ? "DIDI" : "POS_COUNTER",
       customer,
       localTicketId,
     };
@@ -141,6 +154,7 @@ export default function PaymentPanel() {
       clearOrder();
       setSelectedMethod(null);
       setCashReceived("");
+      setIsDidi(false);
     } catch (err: any) {
       setSaleError(err.message || "No se pudo registrar la venta");
     } finally {
@@ -179,23 +193,78 @@ export default function PaymentPanel() {
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         <div>
+          <button
+            onClick={() => {
+              const next = !isDidi;
+              setIsDidi(next);
+              // El canal fuerza el método server-side de todos modos (ver
+              // resolvePaymentMethodForChannel) — esto solo mantiene la UI
+              // honesta con lo que en realidad va a quedar guardado.
+              setSelectedMethod(next ? "BANCOLOMBIA" : null);
+            }}
+            className={`w-full flex items-center justify-between rounded-xl p-3 border-2 transition-colors ${
+              isDidi ? "border-brand-600 bg-brand-50" : "border-neutral-200 bg-white"
+            }`}
+          >
+            <span className={`text-sm font-semibold ${isDidi ? "text-brand-700" : "text-neutral-600"}`}>
+              Pedido DiDi
+            </span>
+            <span
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isDidi ? "bg-brand-600" : "bg-neutral-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  isDidi ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </span>
+          </button>
+        </div>
+
+        <div>
           <h3 className="text-sm font-semibold text-neutral-500 mb-2">Método de pago</h3>
           <div data-tour="payment-methods" className="grid grid-cols-3 gap-2">
             {PAYMENT_METHODS.map((m) => {
               const Icon = m.icon;
               const active = selectedMethod === m.key;
+              // Con "Pedido DiDi" activo, el método queda forzado a
+              // Bancolombia (ver arriba) — Efectivo/Nequi se deshabilitan
+              // en vez de ocultarse, para que quede claro por qué no se
+              // pueden elegir en vez de simplemente desaparecer.
+              const disabled = isDidi && m.key !== "BANCOLOMBIA";
               return (
                 <button
                   key={m.key}
+                  disabled={disabled}
                   onClick={() => {
+                    if (disabled) return;
                     setSelectedMethod(m.key);
-                    if (m.key === "CASH") openModal("CASH_PAYMENT");
+                    if (m.key === "EFECTIVO") openModal("CASH_PAYMENT");
                   }}
                   className={`rounded-xl py-4 flex flex-col items-center gap-1 border-2 transition-colors ${
                     active ? "border-brand-600 bg-brand-50" : "border-transparent bg-white shadow-sm"
-                  }`}
+                  } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                 >
-                  <Icon size={22} className={active ? "text-brand-600" : "text-neutral-400"} />
+                  {/* Slot CUADRADO fijo compartido — un rectángulo (alto
+                      distinto del ancho) distribuye el espacio sobrante de
+                      `object-contain` de forma distinta en X que en Y según
+                      el aspect ratio propio de cada imagen, lo que se ve
+                      "descentrado" contra el texto de abajo aunque el
+                      contenido esté centrado dentro de la imagen. Un slot
+                      cuadrado no tiene ese problema en ningún eje. */}
+                  <div className="h-9 w-9 flex items-center justify-center">
+                    {Icon ? (
+                      <Icon size={26} className={active ? "text-brand-600" : "text-neutral-400"} />
+                    ) : (
+                      <img
+                        src={m.iconSrc}
+                        alt={m.label}
+                        className={`h-9 w-9 object-contain ${active ? "" : "opacity-60"}`}
+                      />
+                    )}
+                  </div>
                   <span className={`text-xs font-medium ${active ? "text-brand-700" : "text-neutral-600"}`}>
                     {m.label}
                   </span>
@@ -205,7 +274,7 @@ export default function PaymentPanel() {
           </div>
         </div>
 
-        {selectedMethod === "CASH" && (
+        {selectedMethod === "EFECTIVO" && (
           <div className="bg-white rounded-xl p-3 shadow-sm">
             <div className="flex items-center justify-between">
               <label className="text-xs text-neutral-500">Efectivo recibido</label>
@@ -239,6 +308,12 @@ export default function PaymentPanel() {
             {saleError}
           </div>
         )}
+
+        {/* Última cosa que ve el cajero antes de "Cobrar" — recapitulación
+            de solo lectura del pedido (ver OrderSummary.tsx). El pedido en
+            sí se arma/edita en OrderPanel.tsx (columna del medio), esto no
+            duplica esos controles. */}
+        <OrderSummary selectedMethod={selectedMethod} isDidi={isDidi} />
       </div>
 
       <div className="p-4 border-t border-neutral-200 bg-white">
@@ -247,7 +322,7 @@ export default function PaymentPanel() {
             order.length === 0 ||
             !selectedMethod ||
             processing ||
-            (selectedMethod === "CASH" && Number(cashReceived) < total)
+            (selectedMethod === "EFECTIVO" && Number(cashReceived) < total)
           }
           onClick={finalizeSale}
           className="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-neutral-300 text-white font-bold py-4 rounded-xl text-lg"

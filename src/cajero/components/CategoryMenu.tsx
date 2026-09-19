@@ -80,9 +80,13 @@ export default function CategoryMenu() {
   // Un producto ya agregado a la orden se deshabilita en el grid — la
   // cantidad de ahí en adelante solo se ajusta desde OrderPanel (+/-),
   // no volviendo a tocar el ícono (que antes agregaba una línea nueva
-  // separada por cada click, en vez de sumar a la existente).
-  const productIdsInOrder = useMemo(
-    () => new Set(order.map((line) => line.productId)),
+  // separada por cada click, en vez de sumar a la existente). La cantidad
+  // por producto (no solo si está o no en la orden) alimenta la burbuja
+  // de la esquina superior derecha de cada tarjeta, así que se guarda un
+  // Map en vez de un Set — se actualiza solo si `order` cambia de verdad
+  // (agregar/quitar/ajustar cantidad desde OrderPanel), no en cada render.
+  const quantityByProductId = useMemo(
+    () => new Map(order.map((line) => [line.productId, line.quantity])),
     [order]
   );
 
@@ -139,7 +143,8 @@ export default function CategoryMenu() {
           </p>
         )}
         {products.map((product) => {
-          const inOrder = productIdsInOrder.has(product._id);
+          const quantity = quantityByProductId.get(product._id) ?? 0;
+          const inOrder = quantity > 0;
           return (
             <button
               key={product._id}
@@ -150,10 +155,19 @@ export default function CategoryMenu() {
                   ? "Ya está en la orden — ajusta la cantidad desde el panel de la orden"
                   : undefined
               }
-              className={`bg-white rounded-xl shadow-sm transition-all overflow-hidden text-left ${
+              className={`relative bg-white rounded-xl shadow-sm transition-all overflow-hidden text-left ${
                 inOrder ? "opacity-50 cursor-not-allowed" : "hover:shadow-md active:scale-95"
               }`}
             >
+              {/* Burbuja con la cantidad actual en la orden — sincronizada
+                  con `order` de posStore.ts, así que se actualiza sola si
+                  el cajero ajusta la cantidad desde OrderPanel (+/-), sin
+                  necesidad de volver a tocar esta tarjeta. */}
+              {inOrder && (
+                <span className="absolute top-1.5 right-1.5 z-10 min-w-[22px] h-[22px] px-1 rounded-full bg-brand-600 text-white text-xs font-bold flex items-center justify-center shadow">
+                  {quantity}
+                </span>
+              )}
               <div className="aspect-square bg-neutral-200">
                 {product.imageUrl ? (
                   <img

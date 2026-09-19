@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Printer, Eye } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { printThermalReceipt, previewThermalReceipt, type PrintReceiptPayload } from "../services/printerService";
 import { formatDateTime } from "../utils/timezone";
 
@@ -8,18 +9,39 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
-// "CARD" (Tarjeta) se quitó a propósito — el negocio no recibe pagos con
-// datáfono (ver punto 61 de admin-frontend/CLAUDE.md). Este mapa también
-// alimenta el <select> de método de pago de SaleModal.tsx/
-// SaleEditModal.tsx (ver esos archivos) — quitarlo de acá ya lo saca de
-// ambos formularios, sin tener que tocar ninguno de los dos por separado.
-// Una venta VIEJA con `paymentMethod: "CARD"` (si existiera) sigue
-// mostrándose bien acá abajo gracias al fallback `|| sale.paymentMethod`,
-// solo que con el valor crudo en vez de una etiqueta bonita.
+// NIT del negocio — constante fija, no varía por sede (mismo criterio que
+// "Mecatos el Santi" ya hardcodeado más abajo, no hace falta un campo en
+// Branch para un dato que es igual para las 9 sedes). Confirmado contra
+// facturas reales ya aprobadas por la DIAN de esta misma cuenta Siigo (ver
+// punto 10 de backend/CLAUDE.md).
+const BUSINESS_NIT = "1144209364-9";
+
+// Mapa de DESPLIEGUE completo — incluye valores históricos (CASH/
+// DELIVERY_APP/CARD) para que un recibo/tabla de una venta VIEJA siga
+// mostrando una etiqueta bonita en vez del valor crudo. "CARD" (Tarjeta)
+// nunca tuvo etiqueta acá a propósito — el negocio no recibe pagos con
+// datáfono (ver punto 61 de admin-frontend/CLAUDE.md); una venta vieja con
+// ese método sigue mostrándose bien gracias al fallback `|| sale.
+// paymentMethod` de quien consuma este mapa, solo con el valor crudo.
+//
+// Para armar el <select> de SaleModal.tsx/SaleEditModal.tsx usa
+// `activePaymentMethods` más abajo, NO este mapa — CASH/DELIVERY_APP ya no
+// se ofrecen como opción nueva (mismo tratamiento que CARD), solo se
+// siguen mostrando si una venta ya guardada los tiene. Ver punto 34 de
+// CLAUDE.md.
 export const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
+  EFECTIVO: "Efectivo",
   NEQUI: "Nequi",
   DELIVERY_APP: "DIDI",
+  BANCOLOMBIA: "Bancolombia",
+};
+
+// Valores ACTIVOS — los únicos ofrecidos al crear/editar una venta.
+export const activePaymentMethods: Record<string, string> = {
+  EFECTIVO: "Efectivo",
+  NEQUI: "Nequi",
+  BANCOLOMBIA: "Bancolombia",
 };
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
@@ -37,6 +59,14 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
   const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
+  // Solo se muestra CUFE/QR/pie legal si la venta YA está timbrada de
+  // verdad — para PENDING/SENT/REJECTED (o un mock sin cufe) se mantiene
+  // el mensaje genérico de siempre ("en proceso de validación"). En modo
+  // MOCK (dianService.ts) también queda `dianStatus: "APPROVED"` con un
+  // cufe/invoiceNumber falsos, así que esta sección es probable en dev sin
+  // necesitar Siigo real.
+  const showDianBlock = sale.dianStatus === "APPROVED" && Boolean(sale.cufe);
+
   const buildReceiptPayload = (): PrintReceiptPayload => ({
     branch: branch?.name || "",
     branchAddress: branch?.address,
@@ -52,6 +82,14 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     total: sale.total,
     cashier: cashierName || "—",
     paymentMethod: paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod,
+    showDianBlock,
+    cufe: sale.cufe,
+    qrCodeUrl: sale.qrCodeUrl,
+    dianInvoiceNumber: sale.dianInvoiceNumber,
+    resolutionNumber: branch?.dianConfig?.resolutionNumber,
+    resolutionPrefix: branch?.dianConfig?.prefix,
+    resolutionFrom: branch?.dianConfig?.from,
+    resolutionTo: branch?.dianConfig?.to,
   });
 
   // Intenta la impresora térmica local primero (print-server, ver
@@ -105,12 +143,18 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
               draggable={false}
             />
             <h2 className="font-bold text-lg">Mecatos el Santi</h2>
+            <p className="text-xs text-neutral-500">NIT: {BUSINESS_NIT}</p>
             <p className="text-xs text-neutral-500">{branch?.name}</p>
             <p className="text-xs text-neutral-500">{branch?.address}</p>
             <p className="text-xs text-neutral-500">{branch?.phone}</p>
           </div>
 
           <div className="text-xs text-neutral-500 mb-4 space-y-0.5">
+            {sale.dianInvoiceNumber && (
+              <p className="text-center font-medium text-neutral-600 mb-1">
+                Factura electrónica de venta No. {sale.dianInvoiceNumber}
+              </p>
+            )}
             <div className="flex justify-between gap-3">
               <span>Ticket: {String(sale._id).slice(-8).toUpperCase()}</span>
               <span>{formatDateTime(sale.createdAt)}</span>
@@ -166,10 +210,40 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             </div>
           )}
 
-          <div className="text-center text-xs text-neutral-400 border-t border-neutral-200 pt-3">
-            <p>Factura electrónica en proceso de validación DIAN.</p>
-            <p className="mt-1">¡Gracias por tu compra!</p>
-          </div>
+          {showDianBlock ? (
+            <div className="text-center text-xs text-neutral-500 border-t border-neutral-200 pt-3 space-y-2">
+              <div>
+                <p className="font-medium text-neutral-600">CUFE</p>
+                <p className="break-all font-mono text-[10px] text-neutral-400">{sale.cufe}</p>
+              </div>
+              <div className="flex justify-center">
+                <QRCodeSVG value={sale.qrCodeUrl || sale.cufe} size={96} />
+              </div>
+              <p className="text-[10px] text-neutral-400 leading-snug">
+                Al pago de esta factura de venta le aplican las normas relativas a la letra de cambio
+                (artículo 5, Ley 1231 de 2008).
+              </p>
+              <p className="text-[10px] text-neutral-400 leading-snug">
+                Documento electrónico emitido a través de Siigo S.A.S., proveedor tecnológico autorizado
+                por la DIAN.
+              </p>
+              {branch?.dianConfig?.resolutionNumber && (
+                <p className="text-[10px] text-neutral-400 leading-snug">
+                  Resolución DIAN No. {branch.dianConfig.resolutionNumber}, prefijo {branch.dianConfig.prefix}
+                  {branch.dianConfig.from != null && branch.dianConfig.to != null
+                    ? `, del ${branch.dianConfig.from} al ${branch.dianConfig.to}`
+                    : ""}
+                  .
+                </p>
+              )}
+              <p className="pt-1">¡Gracias por tu compra!</p>
+            </div>
+          ) : (
+            <div className="text-center text-xs text-neutral-400 border-t border-neutral-200 pt-3">
+              <p>Factura electrónica en proceso de validación DIAN.</p>
+              <p className="mt-1">¡Gracias por tu compra!</p>
+            </div>
+          )}
         </div>
 
         <div className="no-print flex gap-2 p-6 pt-0">

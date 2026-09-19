@@ -45,7 +45,7 @@ const links = [
     label: "Finanzas",
     icon: <Wallet size={20} />,
     tour: "closures-link",
-  },
+  }
 ];
 
 /**

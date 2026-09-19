@@ -4,9 +4,10 @@ import { adminApi } from "../services/api";
 import ProductModal from "../components/ProductModal";
 import StockModal from "../components/StockModal";
 import ManagedStockModal from "../components/ManagedStockModal";
+import BulkStockModal from "../components/BulkStockModal";
 import MoreFiltersModal from "../components/MoreFiltersModal";
 import Swal from "sweetalert2";
-import { Hamburger, LayersPlus, ShieldCheck, SquarePen, Trash, Trash2, Warehouse } from "lucide-react";
+import { Hamburger, LayersPlus, ShieldCheck, SquarePen, Table2, Trash, Trash2, Warehouse } from "lucide-react";
 import { useSelectedBranch } from "../layout/Layout";
 import { useAuthSession } from "../components/AuthProvider";
 
@@ -88,6 +89,11 @@ export default function Inventario() {
   const [lowStockOnly, setLowStockOnly] = useState(() => searchParams.get("lowStock") === "true");
   const [stockProduct, setStockProduct] = useState<any>(null);
   const [managedStockProduct, setManagedStockProduct] = useState<any>(null);
+  // "Carga Masiva" (BulkStockModal, ver ese componente) — matriz producto x
+  // sede para corregir stock de muchos productos a la vez. Mismo criterio
+  // de permisos que ManagedStockModal (solo ADMIN, ver `isAdmin` arriba):
+  // es la extensión multi-producto de esa misma herramienta.
+  const [bulkStockModalOpen, setBulkStockModalOpen] = useState(false);
   // Modal "Más filtros" de la vista de celular (ver punto 63 de CLAUDE.md)
   // — solo `search` queda visible fuera del modal; "Mostrar inactivos"/
   // "Solo stock bajo" viven adentro.
@@ -95,7 +101,7 @@ export default function Inventario() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const pageSize = isMobile ? 5 : 20;
+  const pageSize = isMobile ? 5 : 8;
 
   const load = () => {
     setLoading(true);
@@ -215,12 +221,27 @@ export default function Inventario() {
               Solo stock bajo
             </label>
           </div>
-          <button
-            onClick={openCreate}
-            className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto"
-          >
-            + Nuevo producto
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Solo ADMIN, y solo en escritorio — una matriz de muchas
+                columnas de sede no es usable en una pantalla angosta (ver
+                el bloque de celular más abajo, que no incluye este botón
+                a propósito). */}
+            {isAdmin && (
+              <button
+                onClick={() => setBulkStockModalOpen(true)}
+                className="flex items-center gap-2 bg-white hover:bg-neutral-50 border border-neutral-200 text-neutral-700 text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto"
+              >
+                <Table2 size={16} />
+                Carga Masiva
+              </button>
+            )}
+            <button
+              onClick={openCreate}
+              className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto"
+            >
+              + Nuevo producto
+            </button>
+          </div>
         </div>
       )}
 
@@ -434,6 +455,10 @@ export default function Inventario() {
           onClose={() => setManagedStockProduct(null)}
           onSaved={load}
         />
+      )}
+
+      {bulkStockModalOpen && (
+        <BulkStockModal onClose={() => setBulkStockModalOpen(false)} onSaved={load} />
       )}
     </div>
   );

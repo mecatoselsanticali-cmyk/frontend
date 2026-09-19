@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Printer, Eye } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { printThermalReceipt, previewThermalReceipt, type PrintReceiptPayload } from "../services/printerService";
 import { formatDateTime } from "../utils/timezone";
 
@@ -8,17 +9,29 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
+// NIT del negocio — constante fija, no varía por sede (mismo criterio que
+// "Mecatos el Santi" ya hardcodeado más abajo). Copia intencional de la
+// misma constante en admin-frontend/src/components/SaleReceipt.tsx (ver
+// punto 12 de CLAUDE.md). Confirmado contra facturas reales ya aprobadas
+// por la DIAN de esta misma cuenta Siigo (ver punto 10 de backend/CLAUDE.md).
+const BUSINESS_NIT = "1144209364-9";
+
 // "CARD" (Tarjeta) se quitó a propósito — el negocio no recibe pagos con
 // datáfono (ver punto 61 de admin-frontend/CLAUDE.md, y la copia de este
 // mismo mapa en el panel admin, `components/SaleReceipt.tsx`). Acá es
 // puramente de despliegue (nada arma un <select> con esto en la zona de
-// cajero, ver PaymentPanel.tsx) — una venta vieja con `paymentMethod:
-// "CARD"` sigue mostrándose bien gracias al fallback `|| sale.
+// cajero — `PaymentPanel.tsx` tiene su propio arreglo de botones, no lee
+// este mapa) — una venta vieja con `paymentMethod: "CARD"`/`"CASH"`/
+// `"DELIVERY_APP"` sigue mostrándose bien gracias al fallback `|| sale.
 // paymentMethod` de abajo, solo con el valor crudo en vez de una etiqueta.
+// EFECTIVO/BANCOLOMBIA son los valores nuevos (ver punto 34 de
+// backend/CLAUDE.md).
 export const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
+  EFECTIVO: "Efectivo",
   NEQUI: "Nequi",
   DELIVERY_APP: "App de domicilios",
+  BANCOLOMBIA: "Bancolombia",
 };
 
 export const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
@@ -36,6 +49,11 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
   const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
+  // Copia intencional de la misma lógica en admin-frontend/src/components/
+  // SaleReceipt.tsx (ver punto 12 de CLAUDE.md) — solo se muestra CUFE/QR/
+  // pie legal si la venta YA está timbrada de verdad.
+  const showDianBlock = sale.dianStatus === "APPROVED" && Boolean(sale.cufe);
+
   const buildReceiptPayload = (): PrintReceiptPayload => ({
     branch: branch?.name || "",
     branchAddress: branch?.address,
@@ -51,6 +69,14 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     total: sale.total,
     cashier: cashierName || "—",
     paymentMethod: paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod,
+    showDianBlock,
+    cufe: sale.cufe,
+    qrCodeUrl: sale.qrCodeUrl,
+    dianInvoiceNumber: sale.dianInvoiceNumber,
+    resolutionNumber: branch?.dianConfig?.resolutionNumber,
+    resolutionPrefix: branch?.dianConfig?.prefix,
+    resolutionFrom: branch?.dianConfig?.from,
+    resolutionTo: branch?.dianConfig?.to,
   });
 
   // Intenta la impresora térmica local primero (print-server, ver
@@ -103,12 +129,18 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
               draggable={false}
             />
             <h2 className="font-bold text-lg">Mecatos el Santi</h2>
+            <p className="text-xs text-neutral-500">NIT: {BUSINESS_NIT}</p>
             <p className="text-xs text-neutral-500">{branch?.name}</p>
             <p className="text-xs text-neutral-500">{branch?.address}</p>
             <p className="text-xs text-neutral-500">{branch?.phone}</p>
           </div>
 
           <div className="text-xs text-neutral-500 mb-4 space-y-0.5">
+            {sale.dianInvoiceNumber && (
+              <p className="text-center font-medium text-neutral-600 mb-1">
+                Factura electrónica de venta No. {sale.dianInvoiceNumber}
+              </p>
+            )}
             <div className="flex justify-between gap-3">
               <span>Ticket: {String(sale._id).slice(-8).toUpperCase()}</span>
               <span>{formatDateTime(sale.createdAt)}</span>
@@ -164,10 +196,40 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             </div>
           )}
 
-          <div className="text-center text-xs text-neutral-400 border-t border-neutral-200 pt-3">
-            <p>Factura electrónica en proceso de validación DIAN.</p>
-            <p className="mt-1">¡Gracias por tu compra!</p>
-          </div>
+          {showDianBlock ? (
+            <div className="text-center text-xs text-neutral-500 border-t border-neutral-200 pt-3 space-y-2">
+              <div>
+                <p className="font-medium text-neutral-600">CUFE</p>
+                <p className="break-all font-mono text-[10px] text-neutral-400">{sale.cufe}</p>
+              </div>
+              <div className="flex justify-center">
+                <QRCodeSVG value={sale.qrCodeUrl || sale.cufe} size={96} />
+              </div>
+              <p className="text-[10px] text-neutral-400 leading-snug">
+                Al pago de esta factura de venta le aplican las normas relativas a la letra de cambio
+                (artículo 5, Ley 1231 de 2008).
+              </p>
+              <p className="text-[10px] text-neutral-400 leading-snug">
+                Documento electrónico emitido a través de Siigo S.A.S., proveedor tecnológico autorizado
+                por la DIAN.
+              </p>
+              {branch?.dianConfig?.resolutionNumber && (
+                <p className="text-[10px] text-neutral-400 leading-snug">
+                  Resolución DIAN No. {branch.dianConfig.resolutionNumber}, prefijo {branch.dianConfig.prefix}
+                  {branch.dianConfig.from != null && branch.dianConfig.to != null
+                    ? `, del ${branch.dianConfig.from} al ${branch.dianConfig.to}`
+                    : ""}
+                  .
+                </p>
+              )}
+              <p className="pt-1">¡Gracias por tu compra!</p>
+            </div>
+          ) : (
+            <div className="text-center text-xs text-neutral-400 border-t border-neutral-200 pt-3">
+              <p>Factura electrónica en proceso de validación DIAN.</p>
+              <p className="mt-1">¡Gracias por tu compra!</p>
+            </div>
+          )}
         </div>
 
         <div className="no-print flex gap-2 p-6 pt-0">

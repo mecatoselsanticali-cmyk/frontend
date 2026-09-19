@@ -46,9 +46,13 @@ export default function PendingDidiPaymentsModal({
     setLoading(true);
     setError("");
     adminApi
+      // Ya no filtra por paymentMethod: "DELIVERY_APP" — paymentStatus
+      // "PENDING_PAYMENT" ya es 100% señal del canal Rappi/DiDi
+      // (resolvePaymentStatus se decide por orderType, ver punto 34 de
+      // backend/CLAUDE.md), así que este filtro por sí solo captura tanto
+      // ventas viejas (DELIVERY_APP) como nuevas (BANCOLOMBIA).
       .listSales({
         branchId,
-        paymentMethod: "DELIVERY_APP",
         paymentStatus: "PENDING_PAYMENT",
         page: 1,
         pageSize: 100,

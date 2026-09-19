@@ -14,6 +14,18 @@ export interface PrintReceiptPayload {
   total: number;
   cashier: string;
   paymentMethod: string;
+  // Campos del bloque DIAN real (CUFE/QR/pie legal) — ver punto 34 de
+  // backend/CLAUDE.md (rediseño de recibo). `showDianBlock` se calcula UNA
+  // sola vez en SaleReceipt.tsx (dianStatus === "APPROVED" && cufe) para
+  // que print-server no tenga que duplicar esa condición.
+  showDianBlock?: boolean;
+  cufe?: string;
+  qrCodeUrl?: string;
+  dianInvoiceNumber?: string;
+  resolutionNumber?: string;
+  resolutionPrefix?: string;
+  resolutionFrom?: number;
+  resolutionTo?: number;
 }
 
 const PRINT_SERVER_URL = "http://localhost:4001/print-receipt";

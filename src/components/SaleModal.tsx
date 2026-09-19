@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { adminApi } from "../services/api";
 import { Plus, Trash2 } from "lucide-react";
-import SaleReceipt, { money, paymentMethodLabels } from "./SaleReceipt";
+import SaleReceipt, { money, activePaymentMethods } from "./SaleReceipt";
 
 interface SaleModalProps {
   initialBranchId?: string;
@@ -23,7 +23,12 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
   const [loadingProducts, setLoadingProducts] = useState(false);
 
   const [rows, setRows] = useState<SaleRow[]>([{ productId: "", quantity: "1" }]);
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
+  const [paymentMethod, setPaymentMethod] = useState("EFECTIVO");
+  // "Procesado por DiDi" — canal, no método de pago (ver punto 34 de
+  // backend/CLAUDE.md). El backend fuerza paymentMethod=BANCOLOMBIA +
+  // paymentStatus=PENDING_PAYMENT cuando esto va marcado, sin importar qué
+  // se haya elegido arriba.
+  const [isDidi, setIsDidi] = useState(false);
   const [category, setCategory] = useState<"REGULAR" | "SPECIAL">("REGULAR");
   const [showCustomer, setShowCustomer] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -119,6 +124,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
         branchId: selectedBranchId,
         items: lineItems.map((it) => ({ productId: it.productId, quantity: it.quantity })),
         paymentMethod,
+        orderType: isDidi ? "DIDI" : undefined,
         customer,
       });
 
@@ -240,21 +246,40 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                 </div>
               )}
 
-              <div>
-                <label className="text-xs text-neutral-500">Método de pago</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
-                >
-                  {Object.entries(paymentMethodLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex items-center gap-2">
+                <input
+                  id="sale-modal-didi"
+                  type="checkbox"
+                  checked={isDidi}
+                  onChange={(e) => setIsDidi(e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="sale-modal-didi" className="text-sm text-neutral-600">
+                  Procesado por DiDi
+                </label>
               </div>
-            {/** 
+
+              {isDidi ? (
+                <p className="text-xs text-brand-700 bg-brand-50 rounded-lg p-2">
+                  Se registrará como Bancolombia, pendiente de liquidar (Cuenta por Cobrar).
+                </p>
+              ) : (
+                <div>
+                  <label className="text-xs text-neutral-500">Método de pago</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                  >
+                    {Object.entries(activePaymentMethods).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            {/**
               <div>
                 <label className="text-xs text-neutral-500">Categoría</label>
                 <select

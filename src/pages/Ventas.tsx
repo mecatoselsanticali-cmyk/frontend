@@ -20,15 +20,28 @@ const statusColors: Record<string, string> = {
 // Etiquetas específicas de esta tabla — a propósito NO son las mismas que
 // `paymentMethodLabels` de SaleReceipt.tsx (usadas en el recibo y en los
 // modals de crear/editar venta): acá se pidió explícitamente "DIDI" en vez
-// de "App de domicilios". Ya no incluye "CARD" (Datáfono, ver punto 61 de
-// CLAUDE.md) como opción de filtro — el negocio no recibe pagos con
-// datáfono; una venta vieja con ese método (si existiera) sigue
-// mostrándose en la tabla igual (ver el fallback `|| s.paymentMethod` más
-// abajo), solo ya no se puede filtrar específicamente a esa opción.
+// de "App de domicilios". Incluye los valores históricos (CASH/
+// DELIVERY_APP) para que una venta vieja siga mostrando una etiqueta
+// bonita en la columna — "CARD" (Datáfono, ver punto 61 de CLAUDE.md)
+// sigue sin etiqueta acá a propósito, se ve con el valor crudo vía el
+// fallback `|| s.paymentMethod` más abajo. Ver punto 34 de
+// backend/CLAUDE.md para el detalle del refactor método-de-pago vs. canal.
 const paymentMethodLabels: Record<string, string> = {
   CASH: "Efectivo",
+  EFECTIVO: "Efectivo",
   NEQUI: "Nequi",
   DELIVERY_APP: "DIDI",
+  BANCOLOMBIA: "Bancolombia",
+};
+
+// Opciones de FILTRO — solo los valores activos/nuevos. El backend agrupa
+// por PAYMENT_METHOD_GROUP (ver adminController.listSales), así que
+// filtrar por "Efectivo" también trae ventas viejas guardadas como CASH
+// sin necesitar exponerlas como opción aparte acá.
+const paymentMethodFilterOptions: Record<string, string> = {
+  EFECTIVO: "Efectivo",
+  NEQUI: "Nequi",
+  BANCOLOMBIA: "Bancolombia",
 };
 
 // "" = pestaña "Todas" (sin filtrar por categoría) — categoría es una
@@ -323,7 +336,7 @@ export default function Ventas() {
                 className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
               >
                 <option value="">Método de pago: todos</option>
-                {Object.entries(paymentMethodLabels).map(([value, label]) => (
+                {Object.entries(paymentMethodFilterOptions).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>
@@ -462,7 +475,7 @@ export default function Ventas() {
               className="w-full border border-neutral-200 rounded-lg px-3 py-2 text-base"
             >
               <option value="">Todos</option>
-              {Object.entries(paymentMethodLabels).map(([value, label]) => (
+              {Object.entries(paymentMethodFilterOptions).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -526,6 +539,17 @@ export default function Ventas() {
               )}
               {sales.map((s) => {
                 const cancelled = s.status === "CANCELLED";
+                // Cubre valores viejos (DELIVERY_APP) y nuevos
+                // (BANCOLOMBIA), más el canal Rappi/DiDi directamente —
+                // ver punto 34 de backend/CLAUDE.md. El canal ya implica
+                // BANCOLOMBIA server-side, pero se chequea también acá por
+                // si acaso una venta vieja tuviera paymentMethod
+                // DELIVERY_APP con un orderType distinto.
+                const isDeliveryAppSale =
+                  s.paymentMethod === "DELIVERY_APP" ||
+                  s.paymentMethod === "BANCOLOMBIA" ||
+                  s.orderType === "DIDI" ||
+                  s.orderType === "RAPPI";
                 return (
                   <tr key={s._id} className={`border-t border-neutral-50 ${cancelled ? "opacity-60" : ""}`}>
                     <td
@@ -551,7 +575,7 @@ export default function Ventas() {
                     <td className="p-3">{s.cashierId?.name || "—"}</td>
                     <td className="p-3">
                       {paymentMethodLabels[s.paymentMethod] || s.paymentMethod}
-                      {s.paymentMethod === "DELIVERY_APP" && (
+                      {isDeliveryAppSale && (
                         <span
                           className={`ml-2 text-xs px-2 py-1 rounded-full ${
                             s.paymentStatus === "PENDING_PAYMENT"
@@ -579,16 +603,18 @@ export default function Ventas() {
                       <div className="flex justify-center">
                         <ActionsMenu
                           items={[
+                            /** 
                             ...(!cancelled
                               ? [{ label: "Editar", onClick: () => setEditingSale(s) }]
-                              : []),
+                              : []),*/
                             { label: "Ver recibo", onClick: () => setViewingSale(s) },
-                            ...(!cancelled && s.paymentMethod === "DELIVERY_APP" && s.paymentStatus === "PENDING_PAYMENT"
+                            ...(!cancelled && isDeliveryAppSale && s.paymentStatus === "PENDING_PAYMENT"
                               ? [{ label: "Confirmar Pago", onClick: () => handleConfirmPayment(s) }]
                               : []),
+                            /**  
                             ...(!cancelled
                               ? [{ label: "Eliminar", danger: true, onClick: () => handleCancel(s) }]
-                              : []),
+                              : []),*/ 
                           ]}
                         />
                       </div>

@@ -124,6 +124,44 @@ export default function DianConfig() {
             </div>
           </div>
 
+          <h3 className="font-semibold text-neutral-700 pt-2">Integración Siigo (PTA)</h3>
+          <p className="text-xs text-neutral-500">
+            Vendedor y tipo de documento de la cuenta de Siigo asignados a esta sede — cada sede tiene los
+            suyos, no son globales. Consulta{" "}
+            <code>npm run test:siigo</code> en el backend para ver los ids reales disponibles en la cuenta.
+          </p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-neutral-500">Siigo Seller ID</label>
+              <input
+                type="number"
+                value={selected.dianConfig.siigoSellerId || ""}
+                onChange={(e) =>
+                  setSelected({
+                    ...selected,
+                    dianConfig: { ...selected.dianConfig, siigoSellerId: Number(e.target.value) || undefined },
+                  })
+                }
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-neutral-500">Siigo Document ID</label>
+              <input
+                type="number"
+                value={selected.dianConfig.siigoDocumentId || ""}
+                onChange={(e) =>
+                  setSelected({
+                    ...selected,
+                    dianConfig: { ...selected.dianConfig, siigoDocumentId: Number(e.target.value) || undefined },
+                  })
+                }
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+              />
+            </div>
+          </div>
+
           {message && <p className="text-sm text-neutral-500">{message}</p>}
 
           <button

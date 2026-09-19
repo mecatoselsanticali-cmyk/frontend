@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { posApi } from "../services/posApi";
 import { usePosStore } from "../store/posStore";
-import SaleReceipt from "../components/SaleReceipt";
+import SaleReceipt, { paymentMethodLabels } from "../components/SaleReceipt";
 import ShiftRequiredNotice from "../components/ShiftRequiredNotice";
 import { formatTime } from "../utils/timezone";
 
@@ -92,7 +92,9 @@ export default function Facturas() {
               <div>
                 <div className="text-sm font-medium">
                   ${sale.total.toLocaleString("es-CO")}{" "}
-                  <span className="text-neutral-400 font-normal">· {sale.paymentMethod}</span>
+                  <span className="text-neutral-400 font-normal">
+                    · {paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod}
+                  </span>
                 </div>
                 <div className="text-xs text-neutral-400">
                   {formatTime(sale.createdAt)}

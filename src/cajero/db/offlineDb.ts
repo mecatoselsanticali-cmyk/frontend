@@ -12,7 +12,7 @@ export interface OfflineSaleItem {
 export interface OfflineSale {
   localTicketId: string; // uuid generado en cliente, evita duplicados al sincronizar
   items: OfflineSaleItem[];
-  paymentMethod: "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP";
+  paymentMethod: "CASH" | "NEQUI" | "CARD" | "DELIVERY_APP" | "EFECTIVO" | "BANCOLOMBIA";
   orderType: "POS_COUNTER" | "RAPPI" | "DIDI" | "DELIVERY_LOCAL";
   customer?: { name?: string; document?: string; email?: string };
   total: number;
