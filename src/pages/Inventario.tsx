@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { adminApi } from "../services/api";
+import LogoLoader from "../components/LogoLoader";
 import ProductModal from "../components/ProductModal";
 import StockModal from "../components/StockModal";
 import ManagedStockModal from "../components/ManagedStockModal";
@@ -320,8 +321,10 @@ export default function Inventario() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-neutral-400">
-                    Cargando...
+                  <td colSpan={9} className="p-10">
+                    <div className="flex justify-center">
+                      <LogoLoader size="sm" text="Cargando..." />
+                    </div>
                   </td>
                 </tr>
               )}
@@ -332,7 +335,7 @@ export default function Inventario() {
                   </td>
                 </tr>
               )}
-              {products.map((p) => (
+              {!loading && products.map((p) => (
                 <tr key={p._id} className="border-t border-neutral-50 hover:bg-neutral-50">
                   <td className="p-3">
                     <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 flex items-center justify-center">

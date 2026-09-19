@@ -31,6 +31,18 @@ export const posApi = {
 
   getSalesHistory: () => posHttp.get("/sales/history").then((r) => r.data),
 
+  // Probe liviano para el polling de PaymentPanel.tsx en ventas
+  // category: "SPECIAL" — dianStatus/cufe/qrCodeUrl/dianInvoiceNumber de
+  // la venta, sin traer el resto del documento.
+  getSaleStatus: (
+    saleId: string
+  ): Promise<{
+    dianStatus: "PENDING" | "SENT" | "APPROVED" | "REJECTED";
+    cufe?: string;
+    qrCodeUrl?: string;
+    dianInvoiceNumber?: string;
+  }> => posHttp.get(`/sales/${saleId}/status`).then((r) => r.data),
+
   // Tabla de stock actual de la sede (SKU/nombre/precio/cantidad/valor
   // total), para la verificación de stock al abrir/cerrar turno.
   getStockSnapshot: () => posHttp.get("/stock-snapshot").then((r) => r.data),

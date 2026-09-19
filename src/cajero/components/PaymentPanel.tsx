@@ -4,7 +4,15 @@ import { usePosStore } from "../store/posStore";
 import { generateLocalTicketId } from "../db/offlineDb";
 import { posApi } from "../services/posApi";
 import SaleReceipt from "./SaleReceipt";
+import EmittingReceipt from "./EmittingReceipt";
 import OrderSummary from "./OrderSummary";
+
+// Cuánto esperamos como máximo a que el worker DIAN confirme una venta
+// "SPECIAL" antes de mostrar el recibo igual (ver punto 67 en curso de
+// backend/CLAUDE.md) — cubre el peor caso real de Siigo (auth + POST +
+// hasta 5 sondeos de 2s por el CUFE, ~10s) con margen.
+const DIAN_POLL_INTERVAL_MS = 1000;
+const DIAN_POLL_MAX_ATTEMPTS = 15;
 
 // "CARD" (Datáfono) se quitó de las opciones a propósito — el negocio solo
 // recibe pagos en efectivo, Nequi o Bancolombia, nunca con datáfono, así
@@ -47,7 +55,21 @@ export default function PaymentPanel() {
   const [cashReceived, setCashReceived] = useState("");
   const [processing, setProcessing] = useState(false);
   const [completedSale, setCompletedSale] = useState<any>(null);
+  // Solo se enciende para ventas category: "SPECIAL" — mientras es true,
+  // se muestra EmittingReceipt en vez de SaleReceipt (ver processSale/
+  // pollDianStatus más abajo).
+  const [awaitingDian, setAwaitingDian] = useState(false);
   const [saleError, setSaleError] = useState("");
+  // Token del polling en curso — se reemplaza en cada nueva venta y se
+  // cancela al desmontar, para que un tick tardío de una venta anterior
+  // nunca pise el estado de una más reciente.
+  const dianPollRef = useRef<{ cancelled: boolean }>({ cancelled: true });
+
+  useEffect(() => {
+    return () => {
+      dianPollRef.current.cancelled = true;
+    };
+  }, []);
   // `processing` (estado de React) no basta como candado: un doble-tap en
   // una pantalla táctil puede disparar dos clicks en el mismo tick, antes
   // de que el primer setProcessing(true) llegue a re-renderizar y
@@ -121,6 +143,49 @@ export default function PaymentPanel() {
     openModal("INVOICE_PROMPT");
   };
 
+  // Ver punto 67 en curso de backend/CLAUDE.md (diseño "Opción A"): createSale
+  // sigue respondiendo de inmediato sin importar el resultado de la emisión
+  // DIAN — esto solo consulta, del lado del cliente, cuándo terminó. Nunca
+  // deja al cajero atrapado: si se agotan los intentos, se muestra el
+  // recibo igual (mismo criterio del punto 31 de src/cajero/CLAUDE.md).
+  const pollDianStatus = (saleId: string) => {
+    const token = { cancelled: false };
+    dianPollRef.current = token;
+    let attempt = 0;
+
+    const tick = async () => {
+      if (token.cancelled) return;
+      attempt++;
+
+      try {
+        const status = await posApi.getSaleStatus(saleId);
+        if (token.cancelled) return;
+
+        if (status.dianStatus !== "PENDING") {
+          setCompletedSale((prev: any) =>
+            prev && String(prev._id) === saleId ? { ...prev, ...status } : prev
+          );
+          setAwaitingDian(false);
+          return;
+        }
+      } catch {
+        // Hiccup de red puntual en el polling — no corta la espera, se
+        // reintenta en el siguiente tick igual que si siguiera "PENDING".
+      }
+
+      if (token.cancelled) return;
+
+      if (attempt >= DIAN_POLL_MAX_ATTEMPTS) {
+        setAwaitingDian(false);
+        return;
+      }
+
+      setTimeout(tick, DIAN_POLL_INTERVAL_MS);
+    };
+
+    setTimeout(tick, DIAN_POLL_INTERVAL_MS);
+  };
+
   const processSale = async (customer?: any) => {
     if (processingRef.current) return;
     processingRef.current = true;
@@ -151,6 +216,16 @@ export default function PaymentPanel() {
       // reintentar, en vez de quedar encolada silenciosamente.
       const sale = await posApi.createSale(payload);
       setCompletedSale(sale);
+      // Solo las ventas "SPECIAL" se encolan de verdad para emisión DIAN
+      // al crearse (ver punto 37 de backend/CLAUDE.md) — una "REGULAR"
+      // nunca va a cambiar de dianStatus, así que esperar sería inútil.
+      if (sale.category === "SPECIAL") {
+        setAwaitingDian(true);
+        pollDianStatus(String(sale._id));
+      } else {
+        dianPollRef.current.cancelled = true;
+        setAwaitingDian(false);
+      }
       clearOrder();
       setSelectedMethod(null);
       setCashReceived("");
@@ -331,7 +406,17 @@ export default function PaymentPanel() {
         </button>
       </div>
 
-      {completedSale && (
+      {completedSale && awaitingDian && (
+        <EmittingReceipt
+          total={completedSale.total}
+          ticketId={String(completedSale._id).slice(-8).toUpperCase()}
+          onSkip={() => {
+            dianPollRef.current.cancelled = true;
+            setAwaitingDian(false);
+          }}
+        />
+      )}
+      {completedSale && !awaitingDian && (
         <SaleReceipt sale={completedSale} onClose={() => setCompletedSale(null)} />
       )}
     </div>
