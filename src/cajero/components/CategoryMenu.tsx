@@ -4,7 +4,11 @@ import { usePosStore } from "../store/posStore";
 import { posApi } from "../services/posApi";
 import { offlineDb } from "../db/offlineDb";
 
-const PAGE_SIZE = 24;
+// Máximo de productos visibles a la vez en el grid de Caja — el resto se
+// alcanza con la paginación (Anterior/Siguiente). Múltiplo de 3 para la
+// grilla `grid-cols-3` (2 filas exactas). Se usa tanto para el `pageSize`
+// que se le pide al backend como para el corte manual del fallback offline.
+const PAGE_SIZE = 6;
 
 export default function CategoryMenu() {
   const products = usePosStore((s) => s.products);
