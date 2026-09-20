@@ -6,6 +6,7 @@ import SaleModal from "../components/SaleModal";
 import SaleEditModal from "../components/SaleEditModal";
 import SaleReceipt from "../components/SaleReceipt";
 import ActionsMenu from "../components/ActionsMenu";
+import LogoLoader from "../components/LogoLoader";
 import PendingDidiPaymentsModal from "../components/PendingDidiPaymentsModal";
 import MoreFiltersModal from "../components/MoreFiltersModal";
 import { formatDateTime, todayColombia, dayOfWeekForDateString } from "../utils/timezone";
@@ -544,8 +545,10 @@ export default function Ventas() {
             <tbody>
               {loading && (
                 <tr>
-                  <td colSpan={9} className="p-6 text-center text-neutral-400">
-                    Cargando...
+                  <td colSpan={9} className="p-10">
+                    <div className="flex justify-center">
+                      <LogoLoader size="sm" text="Cargando..." />
+                    </div>
                   </td>
                 </tr>
               )}
@@ -556,7 +559,7 @@ export default function Ventas() {
                   </td>
                 </tr>
               )}
-              {sales.map((s) => {
+              {!loading && sales.map((s) => {
                 const cancelled = s.status === "CANCELLED";
                 // Cubre valores viejos (DELIVERY_APP) y nuevos
                 // (BANCOLOMBIA), más el canal Rappi/DiDi directamente —

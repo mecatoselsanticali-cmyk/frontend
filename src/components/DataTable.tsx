@@ -1,3 +1,5 @@
+import LogoLoader from "./LogoLoader";
+
 interface Column {
   key: string;
   label: string;
@@ -53,8 +55,10 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={columns.length} className="p-6 text-center text-neutral-400">
-                  Cargando...
+                <td colSpan={columns.length} className="p-0">
+                  <div className="flex items-center justify-center min-h-[22rem]">
+                    <LogoLoader text="Cargando..." />
+                  </div>
                 </td>
               </tr>
             )}
@@ -65,7 +69,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
                 </td>
               </tr>
             )}
-            {rows.map((row, i) => (
+            {!loading && rows.map((row, i) => (
               <tr key={row._id || i} className="border-t border-neutral-50">
                 {columns.map((c) => (
                   <td

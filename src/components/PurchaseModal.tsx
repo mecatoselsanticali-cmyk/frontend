@@ -297,7 +297,7 @@ export default function PurchaseModal({ product, onClose, onSaved }: PurchaseMod
                 <input
                   value={supplierName}
                   onChange={(e) => setSupplierName(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   placeholder="Ej. Distribuidora XYZ"
                 />
               </div>
@@ -307,7 +307,7 @@ export default function PurchaseModal({ product, onClose, onSaved }: PurchaseMod
                 <input
                   value={concept}
                   onChange={(e) => setConcept(e.target.value)}
-                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                  className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   placeholder="Ej. Compra de insumos de la semana"
                 />
               </div>
