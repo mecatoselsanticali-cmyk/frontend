@@ -199,9 +199,16 @@ export default function CategoryMenu() {
         })}
       </div>
 
-      {/* Paginación */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between px-3 py-2 border-t border-neutral-200 bg-white text-sm shrink-0">
+      {/* Paginación — SIEMPRE ocupa su lugar en el layout, aunque haya una
+          sola página (ahí queda `invisible`: no se ve ni se puede enfocar,
+          pero conserva su alto). Si solo se renderizara cuando
+          `totalPages > 1`, el grid de arriba (`flex-1`) ganaría ese alto de
+          más y las tarjetas cambiarían de tamaño según haya o no paginación. */}
+      <div
+          className={`flex items-center justify-between px-3 py-2 border-t border-neutral-200 bg-white text-sm shrink-0 ${
+            totalPages > 1 ? "" : "invisible"
+          }`}
+        >
           <button
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
@@ -220,7 +227,6 @@ export default function CategoryMenu() {
             Siguiente
           </button>
         </div>
-      )}
     </div>
   );
 }
