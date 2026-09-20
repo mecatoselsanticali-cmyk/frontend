@@ -5,10 +5,12 @@ import { posApi } from "../services/posApi";
 import { offlineDb } from "../db/offlineDb";
 
 // Máximo de productos visibles a la vez en el grid de Caja — el resto se
-// alcanza con la paginación (Anterior/Siguiente). Múltiplo de 3 para la
-// grilla `grid-cols-3` (2 filas exactas). Se usa tanto para el `pageSize`
-// que se le pide al backend como para el corte manual del fallback offline.
-const PAGE_SIZE = 6;
+// alcanza con la paginación (Anterior/Siguiente). 9 = grilla de 3x3
+// (`grid-cols-3 grid-rows-3` más abajo, las 3 filas se reparten el alto
+// disponible, así que siempre caben completas sin scroll). Se usa tanto
+// para el `pageSize` que se le pide al backend como para el corte manual
+// del fallback offline.
+const PAGE_SIZE = 9;
 
 export default function CategoryMenu() {
   const products = usePosStore((s) => s.products);
@@ -139,10 +141,10 @@ export default function CategoryMenu() {
       {/* Grid de productos con foto */}
       <div
         data-tour="product-grid"
-        className="flex-1 overflow-y-auto p-3 grid grid-cols-3 gap-3 content-start"
+        className="flex-1 min-h-0 p-3 grid grid-cols-3 grid-rows-3 gap-3"
       >
         {products.length === 0 && (
-          <p className="col-span-3 text-center text-sm text-neutral-400 py-8">
+          <p className="col-span-3 row-span-3 text-center text-sm text-neutral-400 py-8">
             No se encontraron productos
           </p>
         )}
@@ -159,7 +161,7 @@ export default function CategoryMenu() {
                   ? "Ya está en la orden — ajusta la cantidad desde el panel de la orden"
                   : undefined
               }
-              className={`relative bg-white rounded-xl shadow-sm transition-all overflow-hidden text-left ${
+              className={`relative min-h-0 flex flex-col bg-white rounded-xl shadow-sm transition-all overflow-hidden text-left ${
                 inOrder ? "opacity-50 cursor-not-allowed" : "hover:shadow-md active:scale-95"
               }`}
             >
@@ -172,21 +174,21 @@ export default function CategoryMenu() {
                   {quantity}
                 </span>
               )}
-              <div className="aspect-square bg-neutral-200">
+              <div className="relative flex-1 min-h-0 bg-neutral-200">
                 {product.imageUrl ? (
                   <img
                     src={product.imageUrl}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-neutral-400 text-3xl">
+                  <div className="absolute inset-0 flex items-center justify-center text-neutral-400 text-3xl">
                     🍞
                   </div>
                 )}
               </div>
-              <div className="p-2">
+              <div className="px-2 py-1.5 shrink-0">
                 <div className="text-sm font-medium truncate">{product.name}</div>
                 <div className="text-brand-700 font-bold text-sm">
                   ${product.price.toLocaleString("es-CO")}
