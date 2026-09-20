@@ -14,6 +14,7 @@ import {
   Pie,
   Cell,
   Legend,
+  Label,
 } from "recharts";
 import { CircleCheck, TriangleAlert } from "lucide-react";
 import { driver } from "driver.js";
@@ -403,6 +404,29 @@ export default function Dashboard() {
               {topProducts.map((_: any, i: number) => (
                 <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
               ))}
+              {/* Total de unidades del widget (top 5 + "Otros" — el backend ya
+                  agrupa todo lo vendido en esas rebanadas, así que la suma
+                  coincide con el total real). `Label` recibe el centro real
+                  del pie en `viewBox`, así queda centrado aunque la leyenda
+                  de la derecha desplace el gráfico. */}
+              <Label
+                position="center"
+                content={({ viewBox }: any) => {
+                  const { cx, cy } = viewBox || {};
+                  if (cx == null || cy == null) return null;
+                  const totalUnits = topProducts.reduce((sum: number, p: any) => sum + p.quantity, 0);
+                  return (
+                    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
+                      <tspan x={cx} dy="-0.2em" fontSize={22} fontWeight={700} fill="#404040">
+                        {totalUnits.toLocaleString("es-CO")}
+                      </tspan>
+                      <tspan x={cx} dy="1.4em" fontSize={11} fill="#a3a3a3">
+                        unidades
+                      </tspan>
+                    </text>
+                  );
+                }}
+              />
             </Pie>
             <Tooltip
               formatter={(v: number, _n, entry: any) => [`${v} uds. (${entry.payload.percentage}%)`, entry.payload.name]}
