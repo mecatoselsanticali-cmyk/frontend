@@ -15,6 +15,23 @@ const statusColors: Record<string, string> = {
   SENT: "bg-blue-50 text-blue-600",
   APPROVED: "bg-green-50 text-green-600",
   REJECTED: "bg-red-50 text-red-600",
+  // Estado terminal de una venta category: "REGULAR" — nunca hubo (ni
+  // habrá) intento de emisión, así que no es ni un error (rojo) ni algo en
+  // curso (ámbar) — gris neutro, ver punto 37 de backend/CLAUDE.md.
+  NOT_EMITTED: "bg-neutral-100 text-neutral-500",
+};
+
+// Etiqueta en español para la columna "Estado DIAN" — antes mostraba el
+// valor crudo del enum (`s.dianStatus`, en inglés) directo en la tabla,
+// visible para el cliente. El fallback `|| s.dianStatus` cubre cualquier
+// valor futuro del enum que todavía no tenga traducción acá, para no dejar
+// la celda vacía.
+const dianStatusLabels: Record<string, string> = {
+  PENDING: "Pendiente",
+  SENT: "Enviada",
+  APPROVED: "Aprobada",
+  REJECTED: "Rechazada",
+  NOT_EMITTED: "No emitida",
 };
 
 // Etiquetas específicas de esta tabla — a propósito NO son las mismas que
@@ -310,7 +327,7 @@ export default function Ventas() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Buscar por CUFE o ID..."
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-56"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-56 focus:outline-none focus:ring-1 focus:ring-brand-500"
               />
               <input
                 type="date"
@@ -321,7 +338,7 @@ export default function Ventas() {
               <select
                 value={cashierId}
                 onChange={(e) => setCashierId(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">Usuario: todos</option>
                 {cashierOptions.map((u) => (
@@ -333,7 +350,7 @@ export default function Ventas() {
               <select
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">Método de pago: todos</option>
                 {Object.entries(paymentMethodFilterOptions).map(([value, label]) => (
@@ -355,13 +372,14 @@ export default function Ventas() {
               <select
                 value={dianStatus}
                 onChange={(e) => setDianStatus(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">Estado DIAN: todos</option>
                 <option value="PENDING">Pendiente</option>
-                <option value="SENT">Enviado</option>
-                <option value="APPROVED">Aprobado</option>
-                <option value="REJECTED">Rechazado</option>
+                <option value="SENT">Enviada</option>
+                <option value="APPROVED">Aprobada</option>
+                <option value="REJECTED">Rechazada</option>
+                <option value="NOT_EMITTED">No emitida</option>
               </select>
             </div>
             <div className="flex flex-col items-start gap-3 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4">
@@ -491,9 +509,10 @@ export default function Ventas() {
             >
               <option value="">Todos</option>
               <option value="PENDING">Pendiente</option>
-              <option value="SENT">Enviado</option>
-              <option value="APPROVED">Aprobado</option>
-              <option value="REJECTED">Rechazado</option>
+              <option value="SENT">Enviada</option>
+              <option value="APPROVED">Aprobada</option>
+              <option value="REJECTED">Rechazada</option>
+              <option value="NOT_EMITTED">No emitida</option>
             </select>
           </div>
         </MoreFiltersModal>
@@ -564,7 +583,7 @@ export default function Ventas() {
                     <td className="p-3 font-medium">${s.total.toLocaleString("es-CO")}</td>
                     <td className="p-3">
                       <span className={`text-xs px-2 py-1 rounded-full ${statusColors[s.dianStatus]}`}>
-                        {s.dianStatus}
+                        {dianStatusLabels[s.dianStatus] || s.dianStatus}
                       </span>
                       {cancelled && (
                         <span className="ml-1 text-xs px-2 py-1 rounded-full bg-red-50 text-red-600">

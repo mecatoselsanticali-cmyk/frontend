@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Printer, Eye } from "lucide-react";
+import { Printer, Eye, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { printThermalReceipt, previewThermalReceipt, type PrintReceiptPayload } from "../services/printerService";
 import { formatDateTime } from "../utils/timezone";
@@ -133,7 +133,14 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
           .no-print { display: none !important; }
         }
       `}</style>
-      <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative bg-white rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl">
+        <button
+          onClick={onClose}
+          aria-label="Cerrar recibo"
+          className="no-print absolute top-4 right-4 z-10 text-neutral-400 hover:text-neutral-600 rounded-full p-1 hover:bg-neutral-100"
+        >
+          <X size={18} />
+        </button>
         <div id="sale-receipt" className="p-8">
           <div className="flex flex-col items-center text-center border-b border-neutral-200 pb-4 mb-4">
             <img

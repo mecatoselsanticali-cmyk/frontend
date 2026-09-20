@@ -124,7 +124,13 @@ export const adminApi = {
     paymentMethod: string;
     orderType?: string;
     customer?: { name?: string; document?: string; email?: string };
-  }) => adminHttp.post("/sales", data).then((r) => r.data),
+  }) =>
+    // Timeout más generoso que el default (8s, ver httpClient.ts) — una
+    // venta "REGULAR" por tope/cooldown diario ahora puede intentar la
+    // emisión DIAN en línea antes de responder (ver punto 37 de
+    // backend/CLAUDE.md), y el peor caso real de Siigo puede acercarse o
+    // superar los 8s.
+    adminHttp.post("/sales", data, { timeout: 20000 }).then((r) => r.data),
   updateSale: (
     id: string,
     data: {

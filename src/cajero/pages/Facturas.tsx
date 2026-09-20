@@ -10,6 +10,11 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   SENT: { label: "Enviada", className: "bg-blue-50 text-blue-600" },
   APPROVED: { label: "Emitida", className: "bg-green-50 text-green-600" },
   REJECTED: { label: "Rechazada", className: "bg-red-50 text-red-600" },
+  // Venta category: "REGULAR" — nunca se intentó emitir, así que no es
+  // "Pendiente" (el fallback de abajo la habría mostrado así, engañoso ya
+  // que sugiere que algo todavía la va a procesar). Ver punto 37 de
+  // backend/CLAUDE.md.
+  NOT_EMITTED: { label: "No aplica", className: "bg-neutral-100 text-neutral-500" },
 };
 
 /**

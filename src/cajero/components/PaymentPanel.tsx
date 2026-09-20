@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Banknote, Trash2, Coins, type LucideIcon } from "lucide-react";
+import { toast } from "react-toastify";
 import { usePosStore } from "../store/posStore";
 import { generateLocalTicketId } from "../db/offlineDb";
 import { posApi } from "../services/posApi";
 import SaleReceipt from "./SaleReceipt";
 import EmittingReceipt from "./EmittingReceipt";
+import ProcessingSaleModal from "./ProcessingSaleModal";
 import OrderSummary from "./OrderSummary";
+import { DIAN_POLL_INTERVAL_MS, DIAN_POLL_MAX_ATTEMPTS } from "../dianPolling";
 
 // Cuánto esperamos como máximo a que el worker DIAN confirme una venta
 // "SPECIAL" antes de mostrar el recibo igual (ver punto 67 en curso de
 // backend/CLAUDE.md) — cubre el peor caso real de Siigo (auth + POST +
-// hasta 5 sondeos de 2s por el CUFE, ~10s) con margen.
-const DIAN_POLL_INTERVAL_MS = 1000;
-const DIAN_POLL_MAX_ATTEMPTS = 15;
+// hasta 5 sondeos de 2s por el CUFE, ~10s) con margen. Ver
+// `cajero/dianPolling.ts` para el detalle de por qué estas dos constantes
+// no viven acá adentro.
 
 // "CARD" (Datáfono) se quitó de las opciones a propósito — el negocio solo
 // recibe pagos en efectivo, Nequi o Bancolombia, nunca con datáfono, así
@@ -216,10 +219,19 @@ export default function PaymentPanel() {
       // reintentar, en vez de quedar encolada silenciosamente.
       const sale = await posApi.createSale(payload);
       setCompletedSale(sale);
-      // Solo las ventas "SPECIAL" se encolan de verdad para emisión DIAN
-      // al crearse (ver punto 37 de backend/CLAUDE.md) — una "REGULAR"
-      // nunca va a cambiar de dianStatus, así que esperar sería inútil.
-      if (sale.category === "SPECIAL") {
+      // Arriba-derecha a propósito, distinto del `top-center` default del
+      // `<ToastContainer />` (CashierLayout.tsx, ver punto 49 de CLAUDE.md)
+      // que ya usan los toasts de abrir/cerrar turno — react-toastify deja
+      // sobreescribir la posición por toast individual sin tocar el
+      // contenedor compartido ni afectar a esos otros toasts.
+      toast.success("Venta registrada correctamente", { position: "top-right" });
+      // Dos disparadores DIAN distintos (ver punto 37 de backend/CLAUDE.md):
+      // si el cliente pidió factura, la venta se encoló y sigue "PENDING" —
+      // ahí sí hay que esperar. Si quedó "SPECIAL" por el tope/cooldown
+      // diario en cambio, el backend ya intentó la emisión en línea antes de
+      // responder — dianStatus ya viene resuelto (APPROVED, o cayó a
+      // REGULAR), así que no hay nada que esperar.
+      if (sale.category === "SPECIAL" && sale.dianStatus === "PENDING") {
         setAwaitingDian(true);
         pollDianStatus(String(sale._id));
       } else {
@@ -406,6 +418,7 @@ export default function PaymentPanel() {
         </button>
       </div>
 
+      {processing && !completedSale && <ProcessingSaleModal total={total} />}
       {completedSale && awaitingDian && (
         <EmittingReceipt
           total={completedSale.total}

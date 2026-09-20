@@ -1,4 +1,5 @@
 import { posHttp } from "./httpClient";
+import { CREATE_SALE_TIMEOUT_MS } from "../dianPolling";
 
 export const posApi = {
   getBranches: () => posHttp.get("/auth/branches").then((r) => r.data),
@@ -22,7 +23,13 @@ export const posApi = {
   getCatalog: (params?: { page?: number; pageSize?: number; search?: string; category?: string }) =>
     posHttp.get("/catalog", { params }).then((r) => r.data),
 
-  createSale: (payload: any) => posHttp.post("/sales", payload).then((r) => r.data),
+  // Timeout más generoso que el default del cliente (8s, ver httpClient.ts)
+  // — una venta "REGULAR" por tope/cooldown diario ahora puede intentar la
+  // emisión DIAN en línea antes de responder (ver punto 37 de
+  // backend/CLAUDE.md), y el peor caso real de Siigo (auth + POST + hasta 5
+  // sondeos de 2s por el CUFE) puede acercarse o superar los 8s.
+  createSale: (payload: any) =>
+    posHttp.post("/sales", payload, { timeout: CREATE_SALE_TIMEOUT_MS }).then((r) => r.data),
 
   syncBatch: (sales: any[]) =>
     posHttp.post("/sales/sync-batch", { sales }).then((r) => r.data),
