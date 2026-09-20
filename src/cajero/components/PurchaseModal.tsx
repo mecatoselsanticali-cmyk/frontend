@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 import { usePosStore } from "../store/posStore";
 import { posApi } from "../services/posApi";
 import { Plus, Trash2 } from "lucide-react";
+import ProductCombobox from "./ProductCombobox";
 
 interface PurchaseItem {
   productId: string;
@@ -19,7 +20,7 @@ interface PurchaseModalProps {
 
 /**
  * Copia intencional (no un import — ver punto 12 de CLAUDE.md) del modo
- * "compra" de admin-frontend/src/components/StockModal.tsx, restringida al
+ * "compra" de admin-frontend/src/components/PurchaseModal.tsx, restringida al
  * cajero: sin selector de sede (siempre la de la sesión actual, tomada de
  * usePosStore — un cajero solo puede comprar para su propia sede) y sin la
  * opción "+ Crear nuevo producto" (el cajero no tiene permiso para crear
@@ -93,7 +94,7 @@ export default function PurchaseModal({ onClose, onSaved }: PurchaseModalProps) 
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 !m-0">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
         <div className="p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div>
@@ -137,42 +138,41 @@ export default function PurchaseModal({ onClose, onSaved }: PurchaseModalProps) 
               <div className="space-y-2">
                 <label className="text-xs text-neutral-500">Productos</label>
                 {items.map((item, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    <div className="flex-1">
-                      <select
+                  <div
+                    key={index}
+                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:flex md:items-start"
+                  >
+                    <div className="col-start-1 row-start-1 min-w-0 md:flex-1">
+                      <ProductCombobox
+                        products={products}
                         value={item.productId}
-                        onChange={(e) => updateItem(index, { productId: e.target.value })}
-                        className="w-full border border-neutral-200 rounded-lg p-2 text-sm"
-                      >
-                        <option value="">Selecciona un producto</option>
-                        {products.map((p) => (
-                          <option key={p._id} value={p._id}>
-                            {p.name} ({p.sku})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(id) => updateItem(index, { productId: id })}
+                        textSizeClass="text-sm"
+                      />
                     </div>
-                    <input
-                      type="number"
-                      min={0}
-                      value={item.amount}
-                      onChange={(e) => updateItem(index, { amount: e.target.value })}
-                      placeholder="Monto pagado"
-                      className="w-28 border border-neutral-200 rounded-lg p-2 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min={0}
-                      value={item.quantity}
-                      onChange={(e) => updateItem(index, { quantity: e.target.value })}
-                      placeholder="Cantidad"
-                      className="w-24 border border-neutral-200 rounded-lg p-2 text-sm"
-                    />
+                    <div className="col-span-2 row-start-2 grid grid-cols-2 gap-2 md:contents">
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.amount}
+                        onChange={(e) => updateItem(index, { amount: e.target.value })}
+                        placeholder="Monto pagado"
+                        className="w-full md:w-36 border border-neutral-200 rounded-lg p-2 text-sm"
+                      />
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.quantity}
+                        onChange={(e) => updateItem(index, { quantity: e.target.value })}
+                        placeholder="Cantidad"
+                        className="w-full md:w-28 border border-neutral-200 rounded-lg p-2 text-sm"
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeItem(index)}
                       disabled={items.length === 1}
-                      className="text-neutral-400 hover:text-red-500 disabled:opacity-30 p-2"
+                      className="col-start-2 row-start-1 shrink-0 text-neutral-400 hover:text-red-500 disabled:opacity-30 p-2 md:self-start"
                       aria-label="Quitar producto"
                     >
                       <Trash2 size={16} />

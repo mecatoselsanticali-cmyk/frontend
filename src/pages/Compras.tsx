@@ -3,7 +3,7 @@ import Swal from "sweetalert2";
 import { adminApi } from "../services/api";
 import { useSelectedBranch } from "../layout/Layout";
 import DataTable from "../components/DataTable";
-import StockModal from "../components/StockModal";
+import PurchaseModal from "../components/PurchaseModal";
 import PurchaseEditModal from "../components/PurchaseEditModal";
 import MoreFiltersModal from "../components/MoreFiltersModal";
 import ActionsMenu from "../components/ActionsMenu";
@@ -13,7 +13,7 @@ import { formatDateTime } from "../utils/timezone";
  * Vista consolidada de compras: las que los cajeros registran desde la
  * pestaña "Compras" del POS (ver cajero/pages/Compras.tsx, solo lectura
  * aquí) y las que el admin registra directamente con "+ Nueva compra"
- * (StockModal en modo compra) — esta última además incrementa el stock del
+ * (PurchaseModal en modo compra) — esta última además incrementa el stock del
  * producto en las sedes elegidas, por eso trae producto/cantidad.
  */
 
@@ -358,7 +358,7 @@ export default function Compras() {
         </div>
       )}
 
-      {modalOpen && <StockModal onClose={() => setModalOpen(false)} onSaved={load} />}
+      {modalOpen && <PurchaseModal onClose={() => setModalOpen(false)} onSaved={load} />}
 
       {editingPurchase && (
         <PurchaseEditModal

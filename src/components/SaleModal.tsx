@@ -171,7 +171,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
               <select
                 value={selectedBranchId}
                 onChange={(e) => setSelectedBranchId(e.target.value)}
-                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
               >
                 <option value="">Selecciona una sede</option>
                 {branches.map((b) => (
@@ -212,7 +212,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                           <select
                             value={row.productId}
                             onChange={(e) => updateRow(i, { productId: e.target.value })}
-                            className="w-full border border-neutral-200 rounded-lg p-2 text-base"
+                            className="w-full border border-neutral-200 rounded-lg p-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
                           >
                             <option value="">Selecciona un producto</option>
                             {products.map((p) => (
@@ -227,7 +227,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                           min={1}
                           value={row.quantity}
                           onChange={(e) => updateRow(i, { quantity: e.target.value })}
-                          className={`w-20 border rounded-lg p-2 text-base ${
+                          className={`w-20 border rounded-lg p-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500 ${
                             overStock ? "border-red-300 text-red-600" : "border-neutral-200"
                           }`}
                         />
@@ -269,7 +269,7 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                   <select
                     value={paymentMethod}
                     onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                    className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
                   >
                     {Object.entries(activePaymentMethods).map(([value, label]) => (
                       <option key={value} value={value}>

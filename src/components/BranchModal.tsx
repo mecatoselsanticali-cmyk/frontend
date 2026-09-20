@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 interface BranchModalProps {
   branch?: any; // si viene, el modal edita en vez de crear
   onClose: () => void;
-  // Recibe la sede creada/editada — StockModal.tsx lo usa para agregar la
+  // Recibe la sede creada/editada — PurchaseModal.tsx lo usa para agregar la
   // sede recién creada a su propio catálogo en memoria y seleccionarla,
   // igual que ProductModal.tsx.
   onSaved: (branch?: any) => void;
@@ -53,7 +53,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
       // El selector de sede de Topbar.tsx vive en Layout.tsx, que carga su
       // propia lista de sedes UNA sola vez al montar — sin esto, crear o
       // editar una sede desde acá (ya sea Sedes.tsx o el "+ Crear nueva
-      // sede" de StockModal.tsx) la deja desactualizada hasta un refresh
+      // sede" de PurchaseModal.tsx) la deja desactualizada hasta un refresh
       // completo. Mismo patrón que `mecatos:branch-changed` (Layout.tsx,
       // `useSelectedBranch`) — un evento global simple, sin necesidad de
       // subir este estado a un context/store compartido.

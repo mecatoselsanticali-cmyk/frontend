@@ -102,7 +102,7 @@ export const posApi = {
   }) => posHttp.post("/stock-losses", data).then((r) => r.data),
 
   // Compras del día — producto + cantidad, ligadas a inventario (ya no es
-  // el flujo informal con foto de recibo; ver StockModal.tsx del panel
+  // el flujo informal con foto de recibo; ver PurchaseModal.tsx del panel
   // admin para el patrón que esto replica, restringido a la sede propia).
   getPurchases: () => posHttp.get("/purchases").then((r) => r.data),
 

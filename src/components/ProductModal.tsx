@@ -11,7 +11,7 @@ interface Modifier {
 interface ProductModalProps {
   product?: any; // si viene, el modal edita en vez de crear
   onClose: () => void;
-  // Recibe el producto creado/editado — StockModal.tsx lo usa para agregar
+  // Recibe el producto creado/editado — PurchaseModal.tsx lo usa para agregar
   // el producto recién creado a su propio catálogo en memoria y
   // seleccionarlo, sin tener que recargar la lista completa.
   onSaved: (product?: any) => void;

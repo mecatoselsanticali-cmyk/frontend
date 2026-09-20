@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { adminApi } from "../services/api";
 import LogoLoader from "../components/LogoLoader";
 import ProductModal from "../components/ProductModal";
-import StockModal from "../components/StockModal";
+import PurchaseModal from "../components/PurchaseModal";
 import ManagedStockModal from "../components/ManagedStockModal";
 import BulkStockModal from "../components/BulkStockModal";
 import MoreFiltersModal from "../components/MoreFiltersModal";
@@ -67,7 +67,7 @@ export default function Inventario() {
   const { admin } = useAuthSession();
   // Gestión directa de stock (ManagedStockModal, ver punto 60 de
   // admin-frontend/CLAUDE.md) es exclusiva de ADMIN — nunca de MANAGER, a
-  // diferencia del top-up aditivo de StockModal (que sí puede usar un
+  // diferencia del top-up aditivo de PurchaseModal (que sí puede usar un
   // gerente). Ocultar el botón acá es solo la primera capa; el backend
   // (`requireRole("ADMIN")` en `PUT /products/:id/stock`) es la que de
   // verdad lo hace cumplir, ver punto 20 de este mismo archivo.
@@ -445,7 +445,7 @@ export default function Inventario() {
       )}
 
       {stockProduct && (
-        <StockModal
+        <PurchaseModal
           product={stockProduct}
           onClose={() => setStockProduct(null)}
           onSaved={load}

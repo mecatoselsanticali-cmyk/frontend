@@ -61,7 +61,7 @@ export default function Layout() {
 
   // El selector de sede de Topbar.tsx lee esta lista — sin el listener de
   // abajo, crear/editar/(des)activar una sede (desde Sedes.tsx o desde el
-  // "+ Crear nueva sede" de StockModal.tsx) la dejaba desactualizada hasta
+  // "+ Crear nueva sede" de PurchaseModal.tsx) la dejaba desactualizada hasta
   // un refresh completo de la página, porque este efecto solo cargaba una
   // vez al montar. `BranchModal.tsx`/`Sedes.tsx` disparan
   // `mecatos:branches-changed` tras cualquier cambio real — mismo patrón

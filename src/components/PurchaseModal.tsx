@@ -3,9 +3,9 @@ import Swal from "sweetalert2";
 import { adminApi } from "../services/api";
 import ProductModal from "./ProductModal";
 import BranchModal from "./BranchModal";
+import ProductCombobox from "./ProductCombobox";
 import { Plus, Trash2 } from "lucide-react";
 
-const NEW_PRODUCT_OPTION = "__new__";
 const NEW_BRANCH_OPTION = "__new__";
 
 interface BranchStock {
@@ -27,13 +27,13 @@ interface PurchaseBranchEntry {
 
 const emptyPurchaseItem = (): PurchaseItem => ({ productId: "", amount: "", quantity: "" });
 
-interface StockModalProps {
+interface PurchaseModalProps {
   product?: any; // si viene, el producto queda fijo (se abre desde Inventario)
   onClose: () => void;
   onSaved: () => void;
 }
 
-export default function StockModal({ product, onClose, onSaved }: StockModalProps) {
+export default function PurchaseModal({ product, onClose, onSaved }: PurchaseModalProps) {
   // Modo "compra" (sin producto fijo, abierto desde Compras): a diferencia
   // del modo de abajo (un solo producto, repartido por sede), acá se arma
   // una orden que puede cubrir varias sedes y, dentro de cada una, varios
@@ -263,7 +263,11 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 !m-0">
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+      <div
+        className={`bg-white rounded-2xl w-full ${
+          isPurchaseMode ? "max-w-2xl" : "max-w-lg"
+        } max-h-[90vh] overflow-y-auto shadow-xl`}
+      >
         <div className="p-6 space-y-5">
           <div className="flex items-center justify-between">
             <div>
@@ -344,7 +348,7 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                                   }
                                   updateBranchEntry(branchIndex, e.target.value);
                                 }}
-                                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1 focus:outline-none focus:ring-1 focus:ring-brand-500"
                               >
                                 <option value="">Selecciona una sede</option>
                                 <option value={NEW_BRANCH_OPTION}>+ Crear nueva sede</option>
@@ -372,49 +376,45 @@ export default function StockModal({ product, onClose, onSaved }: StockModalProp
                         {entry.branchId && (
                           <div className="space-y-2">
                             {entry.items.map((item, itemIndex) => (
-                              <div key={itemIndex} className="flex items-start gap-2">
-                                <div className="flex-1">
-                                  <select
+                              <div
+                                key={itemIndex}
+                                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 md:flex md:items-start"
+                              >
+                                {/* Celular: el buscador ocupa su propia línea (junto al
+                                    botón de quitar) y Monto/Cantidad comparten la de abajo,
+                                    así los placeholders caben completos. Desde `md` todo
+                                    vuelve a una sola fila. */}
+                                <div className="col-start-1 row-start-1 min-w-0 md:flex-1">
+                                  <ProductCombobox
+                                    products={products}
                                     value={item.productId}
-                                    onChange={(e) => {
-                                      if (e.target.value === NEW_PRODUCT_OPTION) {
-                                        setCreatingProductFor({ branchIndex, itemIndex });
-                                        return;
-                                      }
-                                      updateItem(branchIndex, itemIndex, { productId: e.target.value });
-                                    }}
-                                    className="w-full border border-neutral-200 rounded-lg p-2 text-base"
-                                  >
-                                    <option value="">Selecciona un producto</option>
-                                    <option value={NEW_PRODUCT_OPTION}>+ Crear nuevo producto</option>
-                                    {products.map((p) => (
-                                      <option key={p._id} value={p._id}>
-                                        {p.name} ({p.sku})
-                                      </option>
-                                    ))}
-                                  </select>
+                                    onChange={(id) => updateItem(branchIndex, itemIndex, { productId: id })}
+                                    onCreateNew={() => setCreatingProductFor({ branchIndex, itemIndex })}
+                                  />
                                 </div>
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={item.amount}
-                                  onChange={(e) => updateItem(branchIndex, itemIndex, { amount: e.target.value })}
-                                  placeholder="Monto pagado"
-                                  className="w-28 border border-neutral-200 rounded-lg p-2 text-base"
-                                />
-                                <input
-                                  type="number"
-                                  min={0}
-                                  value={item.quantity}
-                                  onChange={(e) => updateItem(branchIndex, itemIndex, { quantity: e.target.value })}
-                                  placeholder="Cantidad"
-                                  className="w-24 border border-neutral-200 rounded-lg p-2 text-base"
-                                />
+                                <div className="col-span-2 row-start-2 grid grid-cols-2 gap-2 md:contents">
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.amount}
+                                    onChange={(e) => updateItem(branchIndex, itemIndex, { amount: e.target.value })}
+                                    placeholder="Monto pagado"
+                                    className="w-full md:w-36 border border-neutral-200 rounded-lg p-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+                                  />
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={item.quantity}
+                                    onChange={(e) => updateItem(branchIndex, itemIndex, { quantity: e.target.value })}
+                                    placeholder="Cantidad"
+                                    className="w-full md:w-28 border border-neutral-200 rounded-lg p-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+                                  />
+                                </div>
                                 <button
                                   type="button"
                                   onClick={() => removeItem(branchIndex, itemIndex)}
                                   disabled={entry.items.length === 1}
-                                  className="text-neutral-400 hover:text-red-500 disabled:opacity-30 p-2"
+                                  className="col-start-2 row-start-1 shrink-0 text-neutral-400 hover:text-red-500 disabled:opacity-30 p-2 md:self-start"
                                   aria-label="Quitar producto"
                                 >
                                   <Trash2 size={16} />
