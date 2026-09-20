@@ -153,7 +153,7 @@ export default function Compras() {
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="">Producto: todos</option>
               {productOptions.map((p) => (
@@ -165,7 +165,7 @@ export default function Compras() {
             <select
               value={registeredBy}
               onChange={(e) => setRegisteredBy(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+              className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
             >
               <option value="">Usuario: todos</option>
               {userOptions.map((u) => (
