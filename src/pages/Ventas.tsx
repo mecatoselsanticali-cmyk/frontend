@@ -366,9 +366,9 @@ export default function Ventas() {
                   propia lista/selección/confirmación. */}
               <button
                 onClick={() => setPendingModalOpen(true)}
-                className="px-3 py-2 rounded-lg text-sm font-medium border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+                className="px-3 py-2 rounded-lg text-base border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
               >
-                Pendientes DiDi/Rappi
+                Pendientes DiDi
               </button>
               <select
                 value={dianStatus}
