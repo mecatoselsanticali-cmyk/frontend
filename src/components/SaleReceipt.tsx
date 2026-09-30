@@ -12,8 +12,8 @@ interface SaleReceiptProps {
 // NIT del negocio — constante fija, no varía por sede (mismo criterio que
 // "Mecatos el Santi" ya hardcodeado más abajo, no hace falta un campo en
 // Branch para un dato que es igual para las 9 sedes). Confirmado contra
-// facturas reales ya aprobadas por la DIAN de esta misma cuenta Siigo (ver
-// punto 10 de backend/CLAUDE.md).
+// facturas reales ya aprobadas por la DIAN para el negocio (ver punto 10 de
+// backend/CLAUDE.md).
 const BUSINESS_NIT = "1144209364-9";
 
 // Mapa de DESPLIEGUE completo — incluye valores históricos (CASH/
@@ -59,13 +59,16 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
   const [printing, setPrinting] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
-  // Solo se muestra CUFE/QR/pie legal si la venta YA está timbrada de
-  // verdad — para PENDING/SENT/REJECTED (o un mock sin cufe) se mantiene
-  // el mensaje genérico de siempre ("en proceso de validación"). En modo
-  // MOCK (dianService.ts) también queda `dianStatus: "APPROVED"` con un
-  // cufe/invoiceNumber falsos, así que esta sección es probable en dev sin
-  // necesitar Siigo real.
-  const showDianBlock = sale.dianStatus === "APPROVED" && Boolean(sale.cufe);
+  // Ventas previas al provider lock quedan como LEGACY y usan una atribución
+  // genérica. MOCK nunca debe mostrar un CUFE/QR ficticio como factura DIAN.
+  const dianProvider: "MOCK" | "SIIGO" | "FACTUS" | "LEGACY" =
+    sale.electronicInvoice?.provider || "LEGACY";
+  const isMockInvoice =
+    dianProvider === "MOCK" ||
+    String(sale.dianInvoiceNumber || "").startsWith("FV-MOCK-") ||
+    String(sale.qrCodeUrl || "").includes("mock-dian.local");
+  const dianProviderLabel = dianProvider === "FACTUS" ? "Factus" : dianProvider === "SIIGO" ? "Siigo" : undefined;
+  const showDianBlock = !isMockInvoice && sale.dianStatus === "APPROVED" && Boolean(sale.cufe);
 
   const buildReceiptPayload = (): PrintReceiptPayload => ({
     branch: branch?.name || "",
@@ -82,10 +85,11 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     total: sale.total,
     cashier: cashierName || "—",
     paymentMethod: paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod,
+    dianProvider,
     showDianBlock,
     cufe: sale.cufe,
     qrCodeUrl: sale.qrCodeUrl,
-    dianInvoiceNumber: sale.dianInvoiceNumber,
+    dianInvoiceNumber: isMockInvoice ? undefined : sale.dianInvoiceNumber,
     resolutionNumber: branch?.dianConfig?.resolutionNumber,
     resolutionPrefix: branch?.dianConfig?.prefix,
     resolutionFrom: branch?.dianConfig?.from,
@@ -157,7 +161,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
           </div>
 
           <div className="text-xs text-neutral-500 mb-4 space-y-0.5">
-            {sale.dianInvoiceNumber && (
+            {sale.dianInvoiceNumber && !isMockInvoice && (
               <p className="text-center font-medium text-neutral-600 mb-1">
                 Factura electrónica de venta No. {sale.dianInvoiceNumber}
               </p>
@@ -217,7 +221,11 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             </div>
           )}
 
-          {showDianBlock ? (
+          {isMockInvoice ? (
+            <div className="text-center text-xs text-amber-700 border-t border-neutral-200 pt-3">
+              <p>Simulación local (MOCK); este recibo no es una factura válida ante la DIAN.</p>
+            </div>
+          ) : showDianBlock ? (
             <div className="text-center text-xs text-neutral-500 border-t border-neutral-200 pt-3 space-y-2">
               <div>
                 <p className="font-medium text-neutral-600">CUFE</p>
@@ -231,8 +239,9 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
                 (artículo 5, Ley 1231 de 2008).
               </p>
               <p className="text-[10px] text-neutral-400 leading-snug">
-                Documento electrónico emitido a través de Siigo S.A.S., proveedor tecnológico autorizado
-                por la DIAN.
+                {dianProviderLabel
+                  ? `Documento electrónico emitido a través de ${dianProviderLabel}, proveedor tecnológico autorizado por la DIAN.`
+                  : "Documento electrónico emitido por un proveedor tecnológico autorizado por la DIAN."}
               </p>
               {branch?.dianConfig?.resolutionNumber && (
                 <p className="text-[10px] text-neutral-400 leading-snug">

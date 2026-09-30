@@ -164,7 +164,7 @@ export default function PaymentPanel() {
         const status = await posApi.getSaleStatus(saleId);
         if (token.cancelled) return;
 
-        if (status.dianStatus !== "PENDING") {
+        if (status.dianStatus !== "PENDING" && status.dianStatus !== "SENT") {
           setCompletedSale((prev: any) =>
             prev && String(prev._id) === saleId ? { ...prev, ...status } : prev
           );
@@ -226,12 +226,12 @@ export default function PaymentPanel() {
       // contenedor compartido ni afectar a esos otros toasts.
       toast.success("Venta registrada correctamente", { position: "top-right" });
       // Dos disparadores DIAN distintos (ver punto 37 de backend/CLAUDE.md):
-      // si el cliente pidió factura, la venta se encoló y sigue "PENDING" —
-      // ahí sí hay que esperar. Si quedó "SPECIAL" por el tope/cooldown
+      // si el cliente pidió factura, la venta se encoló y sigue "PENDING" o
+      // "SENT" — ahí sí hay que esperar. Si quedó "SPECIAL" por el tope/cooldown
       // diario en cambio, el backend ya intentó la emisión en línea antes de
       // responder — dianStatus ya viene resuelto (APPROVED, o cayó a
       // REGULAR), así que no hay nada que esperar.
-      if (sale.category === "SPECIAL" && sale.dianStatus === "PENDING") {
+      if (sale.category === "SPECIAL" && (sale.dianStatus === "PENDING" || sale.dianStatus === "SENT")) {
         setAwaitingDian(true);
         pollDianStatus(String(sale._id));
       } else {

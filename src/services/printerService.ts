@@ -14,6 +14,7 @@ export interface PrintReceiptPayload {
   total: number;
   cashier: string;
   paymentMethod: string;
+  dianProvider?: "MOCK" | "SIIGO" | "FACTUS" | "LEGACY";
   // Campos del bloque DIAN real (CUFE/QR/pie legal) — ver punto 34 de
   // backend/CLAUDE.md (rediseño de recibo). `showDianBlock` se calcula UNA
   // sola vez en SaleReceipt.tsx (dianStatus === "APPROVED" && cufe) para

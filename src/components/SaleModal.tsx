@@ -34,6 +34,8 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
   const [customerName, setCustomerName] = useState("");
   const [customerDocument, setCustomerDocument] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
+  const [identificationDocumentCode, setIdentificationDocumentCode] = useState("");
+  const [legalOrganizationCode, setLegalOrganizationCode] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -112,12 +114,37 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
       return;
     }
 
+    const hasCustomerInformation = showCustomer && Boolean(
+      customerName.trim() ||
+        customerDocument.trim() ||
+        customerEmail.trim() ||
+        identificationDocumentCode ||
+        legalOrganizationCode
+    );
+    if (
+      hasCustomerInformation &&
+      (!customerName.trim() ||
+        !customerDocument.trim() ||
+        !identificationDocumentCode ||
+        !legalOrganizationCode)
+    ) {
+      setError("Para facturar a nombre del comprador completa nombre, documento, tipo de documento y tipo de persona");
+      setShowCustomer(true);
+      return;
+    }
+
     setSaving(true);
     setError("");
     try {
       const customer =
-        customerName || customerDocument || customerEmail
-          ? { name: customerName || undefined, document: customerDocument || undefined, email: customerEmail || undefined }
+        hasCustomerInformation
+          ? {
+              name: customerName.trim(),
+              document: customerDocument.trim(),
+              email: customerEmail.trim() || undefined,
+              identificationDocumentCode,
+              legalOrganizationCode,
+            }
           : undefined;
 
       const sale = await adminApi.createSale({
@@ -304,16 +331,44 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                 </button>
                 {showCustomer && (
                   <div className="grid grid-cols-2 gap-2 mt-2">
+                    <select
+                      value={legalOrganizationCode}
+                      onChange={(e) => setLegalOrganizationCode(e.target.value)}
+                      className="border border-neutral-200 rounded-lg p-2 text-base"
+                    >
+                      <option value="">Tipo de persona</option>
+                      <option value="2">Persona natural</option>
+                      <option value="1">Persona jurídica</option>
+                    </select>
+                    <select
+                      value={identificationDocumentCode}
+                      onChange={(e) => setIdentificationDocumentCode(e.target.value)}
+                      className="border border-neutral-200 rounded-lg p-2 text-base"
+                    >
+                      <option value="">Tipo de documento</option>
+                      <option value="13">Cédula de ciudadanía</option>
+                      <option value="31">NIT</option>
+                      <option value="12">Tarjeta de identidad</option>
+                      <option value="22">Cédula de extranjería</option>
+                      <option value="41">Pasaporte</option>
+                      <option value="42">Documento extranjero</option>
+                      <option value="11">Registro civil</option>
+                      <option value="21">Tarjeta de extranjería</option>
+                      <option value="47">PEP</option>
+                      <option value="48">PPT</option>
+                      <option value="50">NIT de otro país</option>
+                      <option value="91">NUIP</option>
+                    </select>
                     <input
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-                      placeholder="Nombre"
+                      placeholder={legalOrganizationCode === "1" ? "Razón social" : "Nombre"}
                       className="border border-neutral-200 rounded-lg p-2 text-base"
                     />
                     <input
                       value={customerDocument}
                       onChange={(e) => setCustomerDocument(e.target.value)}
-                      placeholder="Documento"
+                      placeholder={identificationDocumentCode === "31" ? "NIT sin puntos (DV opcional: 900123456-7)" : "Número de documento"}
                       className="border border-neutral-200 rounded-lg p-2 text-base"
                     />
                     <input
@@ -322,6 +377,9 @@ export default function SaleModal({ initialBranchId, onClose, onSaved }: SaleMod
                       placeholder="Correo"
                       className="border border-neutral-200 rounded-lg p-2 text-base col-span-2"
                     />
+                    <p className="col-span-2 text-xs text-neutral-400">
+                      Para emitir factura a nombre del comprador se requieren todos los datos anteriores; el correo es opcional.
+                    </p>
                   </div>
                 )}
               </div>

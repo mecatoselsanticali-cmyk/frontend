@@ -18,7 +18,7 @@ const TOTAL_WAIT_SECONDS = Math.round(TOTAL_WAIT_MS / 1000);
  * Pantalla intermedia entre "Cobrar" y el recibo real, solo para ventas
  * `category: "SPECIAL"` (ver punto 37 de backend/CLAUDE.md) — PaymentPanel.tsx
  * la muestra mientras hace polling de GET /api/pos/sales/:id/status, en vez
- * de mostrar el recibo de inmediato con `dianStatus: "PENDING"`.
+ * de mostrar el recibo de inmediato con `dianStatus: "PENDING"` o `"SENT"`.
  *
  * A propósito NO bloquea sin salida (mismo principio del punto 31 de
  * src/cajero/CLAUDE.md: aviso, nunca atrapado) — "Ver recibo de todas
@@ -40,7 +40,7 @@ export default function EmittingReceipt({ total, ticketId, onSkip }: EmittingRec
       <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-8 text-center">
         <LogoLoader text="Emitiendo factura ante la DIAN…" />
         <p className="text-xs text-neutral-500 mb-5 max-w-[26ch] mx-auto">
-          Estamos confirmando esta venta con Siigo. El recibo aparece apenas llegue el CUFE.
+          Estamos esperando la respuesta del proveedor electrónico. El recibo se actualizará cuando haya una respuesta.
         </p>
         <div className="h-1 rounded-full bg-neutral-100 overflow-hidden mb-2">
           <div
