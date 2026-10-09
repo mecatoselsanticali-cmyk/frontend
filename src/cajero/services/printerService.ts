@@ -31,8 +31,21 @@ export interface PrintReceiptPayload {
   resolutionTo?: number;
 }
 
-const PRINT_SERVER_URL = "http://localhost:4001/print-receipt";
-const PREVIEW_SERVER_URL = "http://localhost:4001/preview-receipt";
+// Desde una página HTTPS (producción), `http://localhost:4001/...` es Mixed
+// Content y el navegador la bloquea en silencio — el frontend entonces cae a
+// `window.print()` y parece que la térmica está ocupada. El print-server solo
+// está bindado a 127.0.0.1, así que desde HTTPS podemos ir directamente a
+// `http://127.0.0.1:4001/...` sin preocuparnos por CORS (es loopback). En dev
+// (HTTP) seguimos usando `localhost` igual que antes.
+function printServerUrl(path: string): string {
+  if (typeof window !== "undefined" && window.location?.protocol === "https:") {
+    return `http://127.0.0.1:4001${path}`;
+  }
+  return `http://localhost:4001${path}`;
+}
+
+const PRINT_SERVER_URL = printServerUrl("/print-receipt");
+const PREVIEW_SERVER_URL = printServerUrl("/preview-receipt");
 
 /**
  * Intenta imprimir el recibo en la impresora térmica local. Si el
@@ -68,6 +81,15 @@ export const printThermalReceipt = async (data: PrintReceiptPayload): Promise<bo
  * conectada. Requiere que el print-server local esté corriendo (por eso
  * NO cae a ningún fallback silencioso como `printThermalReceipt`: si no
  * está disponible, se lanza el error para que quien llame lo muestre).
+ *
+ * Antes, cualquier `!response.ok` lanzaba el mensaje genérico "Print-server
+ * local no disponible para vista previa" — indistinguible de un fallo de
+ * conexión real, cuando en realidad podía ser un 400 con un error de
+ * validación concreto (`{"error":"item con campos numéricos inválidos"}`).
+ * El cajero veía el mensaje genérico y asumía que la térmica estaba
+ * desconectada. Ahora se intenta leer el body JSON y propagar el `error`
+ * real del servidor; solo si no se puede leer (red caída, CORS bloqueó la
+ * respuesta) se cae al mensaje genérico.
  */
 export const previewThermalReceipt = async (data: PrintReceiptPayload): Promise<void> => {
   const response = await fetch(PREVIEW_SERVER_URL, {
@@ -77,7 +99,18 @@ export const previewThermalReceipt = async (data: PrintReceiptPayload): Promise<
   });
 
   if (!response.ok) {
-    throw new Error("Print-server local no disponible para vista previa");
+    let serverMessage: string | undefined;
+    try {
+      const body = await response.json();
+      if (body && typeof body.error === "string") serverMessage = body.error;
+    } catch {
+      // body no es JSON o no se pudo parsear — probablemente CORS o red caída
+    }
+    throw new Error(
+      serverMessage
+        ? `Print-server rechazó el recibo: ${serverMessage}`
+        : "Print-server local no disponible para vista previa"
+    );
   }
 
   const html = await response.text();
