@@ -75,6 +75,11 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     branchAddress: branch?.address,
     branchPhone: branch?.phone,
     invoiceId: String(sale._id).slice(-8).toUpperCase(),
+    // Fecha real de la venta (Mongoose la guarda como createdAt en cada
+    // Sale). Si la reimpresión ocurre horas/días después, este campo
+    // asegura que el ticket físico muestre cuándo se hizo la venta, no
+    // cuándo se mandó a reimprimir.
+    createdAt: sale.createdAt,
     items: sale.items.map((it: any) => ({
       name: it.name,
       quantity: it.quantity,

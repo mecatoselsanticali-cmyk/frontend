@@ -11,6 +11,12 @@ export interface PrintReceiptPayload {
   branchAddress?: string;
   branchPhone?: string;
   invoiceId: string;
+  // Fecha/hora en que se HIZO la venta (viene del backend como ISO 8601,
+  // p.ej. "2025-12-31T20:00:00.000Z"). Si no viene, el print-server cae a
+  // "fecha de impresión" — útil para reimpresiones manuales futuras. La
+  // conversión a hora de Colombia la hace el server con timezone
+  // America/Bogota (ver formatBogotaDateTime en index.js).
+  createdAt?: string;
   items: Array<{ name: string; quantity: number; price: number; subtotal: number }>;
   subtotal: number;
   total: number;
