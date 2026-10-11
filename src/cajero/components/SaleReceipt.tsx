@@ -9,12 +9,12 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
-// NIT del negocio — constante fija, no varía por sede (mismo criterio que
-// "Mecatos el Santi" ya hardcodeado más abajo). Copia intencional de la
-// misma constante en admin-frontend/src/components/SaleReceipt.tsx (ver
-// punto 12 de CLAUDE.md). Confirmado contra facturas reales ya aprobadas
-// por la DIAN para el negocio (ver punto 10 de backend/CLAUDE.md).
-const BUSINESS_NIT = "1144209364-9";
+// El NIT ya NO es una constante fija: ahora cada sede tiene el suyo en
+// `Branch.nit` y se imprime el de la sede de la venta (si viene poblado).
+// Antes era un `const BUSINESS_NIT = "1144209364-9"` hardcodeado; copia
+// intencional del mismo cambio en admin-frontend/src/components/
+// SaleReceipt.tsx (ver punto 12 de CLAUDE.md — duplicación de archivos
+// entre la zona admin y la zona cajero).
 
 // "CARD" (Tarjeta) se quitó a propósito — el negocio no recibe pagos con
 // datáfono (ver punto 61 de admin-frontend/CLAUDE.md, y la copia de este
@@ -65,6 +65,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     branch: branch?.name || "",
     branchAddress: branch?.address,
     branchPhone: branch?.phone,
+    branchNit: branch?.nit,
     invoiceId: String(sale._id).slice(-8).toUpperCase(),
     // Fecha real de la venta (Mongoose la guarda como createdAt en cada
     // Sale). Si la reimpresión ocurre horas/días después, este campo
@@ -149,7 +150,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
               draggable={false}
             />
             <h2 className="font-bold text-lg">Mecatos el Santi</h2>
-            <p className="text-xs text-neutral-500">NIT: {BUSINESS_NIT}</p>
+            {branch?.nit && <p className="text-xs text-neutral-500">NIT: {branch.nit}</p>}
             <p className="text-xs text-neutral-500">{branch?.name}</p>
             <p className="text-xs text-neutral-500">{branch?.address}</p>
             <p className="text-xs text-neutral-500">{branch?.phone}</p>

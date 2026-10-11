@@ -143,6 +143,7 @@ export default function Ventas() {
         pageSize,
       })
       .then((res) => {
+        console.log(res);
         setSales(res.data);
         setTotal(res.total);
         setTotalAmount(res.totalAmount);

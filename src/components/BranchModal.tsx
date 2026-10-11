@@ -11,7 +11,7 @@ interface BranchModalProps {
   onSaved: (branch?: any) => void;
 }
 
-const emptyForm = { name: "", address: "", phone: "", dailyCap: "", dianResponsible: false };
+const emptyForm = { name: "", address: "", phone: "", nit: "", dailyCap: "", dianResponsible: false };
 
 export default function BranchModal({ branch, onClose, onSaved }: BranchModalProps) {
   const isEditing = Boolean(branch);
@@ -22,6 +22,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
           name: branch.name,
           address: branch.address,
           phone: branch.phone,
+          nit: branch.nit ?? "",
           dianResponsible: branch.dianResponsible ?? false,
         }
       : emptyForm
@@ -42,6 +43,7 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
       name: form.name,
       address: form.address,
       phone: form.phone,
+      nit: form.nit,
       dianResponsible: form.dianResponsible,
     };
 
@@ -109,7 +111,16 @@ export default function BranchModal({ branch, onClose, onSaved }: BranchModalPro
                 className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
               />
             </div>
-            
+            <div>
+              <label className="text-xs text-neutral-500">NIT</label>
+              <input
+                value={form.nit}
+                onChange={(e) => setForm({ ...form, nit: e.target.value })}
+                className="w-full border border-neutral-200 rounded-lg p-2 text-base mt-1"
+                placeholder="Ej. 900123456-7"
+              />
+            </div>
+
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"

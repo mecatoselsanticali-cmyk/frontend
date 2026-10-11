@@ -8,6 +8,11 @@ export interface PrintReceiptPayload {
   branch: string;
   branchAddress?: string;
   branchPhone?: string;
+  // NIT de la sede — antes era una constante hardcodeada en el server, ahora
+  // cada sede tiene el suyo en `Branch.nit` y se manda en el payload. Si
+  // viene vacío/undefined, el server no imprime la línea (mismo criterio que
+  // el recibo en pantalla).
+  branchNit?: string;
   invoiceId: string;
   // Fecha/hora en que se HIZO la venta (viene del backend como ISO 8601,
   // p.ej. "2025-12-31T20:00:00.000Z"). Si no viene, el print-server cae a

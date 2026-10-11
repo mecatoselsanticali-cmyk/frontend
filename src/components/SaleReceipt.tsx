@@ -9,12 +9,12 @@ interface SaleReceiptProps {
   onClose: () => void;
 }
 
-// NIT del negocio — constante fija, no varía por sede (mismo criterio que
-// "Mecatos el Santi" ya hardcodeado más abajo, no hace falta un campo en
-// Branch para un dato que es igual para las 9 sedes). Confirmado contra
-// facturas reales ya aprobadas por la DIAN para el negocio (ver punto 10 de
-// backend/CLAUDE.md).
-const BUSINESS_NIT = "1144209364-9";
+// El NIT ya NO es una constante fija: ahora cada sede tiene el suyo en
+// `Branch.nit` y se imprime el de la sede de la venta (si viene poblado).
+// Antes era un `const BUSINESS_NIT = "1144209364-9"` hardcodeado; ver el
+// comentario histórico de `pos-printer-server/index.js` (BUSINESS_NIT) para
+// el contexto del refactor. Una sede sin NIT imprime la línea vacía (no se
+// muestra `NIT: undefined` ni un NIT falso de otra sede).
 
 // Mapa de DESPLIEGUE completo — incluye valores históricos (CASH/
 // DELIVERY_APP/CARD) para que un recibo/tabla de una venta VIEJA siga
@@ -54,6 +54,7 @@ export const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
  * ObjectId — así este componente no necesita cargar nada por su cuenta.
  */
 export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
+
   const branch = sale.branchId;
   const cashierName = sale.cashierId?.name;
   const [printing, setPrinting] = useState(false);
@@ -74,6 +75,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     branch: branch?.name || "",
     branchAddress: branch?.address,
     branchPhone: branch?.phone,
+    branchNit: branch?.nit,
     invoiceId: String(sale._id).slice(-8).toUpperCase(),
     // Fecha real de la venta (Mongoose la guarda como createdAt en cada
     // Sale). Si la reimpresión ocurre horas/días después, este campo
@@ -159,7 +161,7 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
               draggable={false}
             />
             <h2 className="font-bold text-lg">Mecatos el Santi</h2>
-            <p className="text-xs text-neutral-500">NIT: {BUSINESS_NIT}</p>
+            {branch?.nit && <p className="text-xs text-neutral-500">NIT: {branch.nit}</p>}
             <p className="text-xs text-neutral-500">{branch?.name}</p>
             <p className="text-xs text-neutral-500">{branch?.address}</p>
             <p className="text-xs text-neutral-500">{branch?.phone}</p>
@@ -261,7 +263,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             </div>
           ) : (
             <div className="text-center text-xs text-neutral-400 border-t border-neutral-200 pt-3">
-              <p>Factura electrónica en proceso de validación DIAN.</p>
               <p className="mt-1">¡Gracias por tu compra!</p>
             </div>
           )}

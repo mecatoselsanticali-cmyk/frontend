@@ -137,7 +137,7 @@ export default function Sedes() {
           <div className="flex flex-wrap items-center gap-4">
             <h3 className="text-neutral-500 text-sm">Sedes de la cadena</h3>
             <input
-              placeholder="Buscar por nombre, dirección o teléfono..."
+              placeholder="Buscar por nombre, dirección, teléfono o NIT..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-full sm:w-72"
@@ -167,7 +167,7 @@ export default function Sedes() {
         <>
           <div className="flex gap-2">
             <input
-              placeholder={`${isMobile ? "Buscar..." : "Buscar por nombre, dirección o teléfono..."}`}
+              placeholder={`${isMobile ? "Buscar..." : "Buscar por nombre, dirección, teléfono o NIT..."}`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 min-w-0 border border-neutral-200 rounded-lg px-3 py-2 text-base"
@@ -214,6 +214,23 @@ export default function Sedes() {
           { key: "name", label: "Nombre" },
           { key: "address", label: "Dirección" },
           { key: "phone", label: "Teléfono", hideOnMobile: true },
+          {
+            // NIT de la sede — antes era una constante global hardcodeada en
+            // el recibo y el ticket térmico, ahora es un dato de la sede
+            // (`Branch.nit`). El backend lo devuelve en cada fila sin
+            // populate (es campo top-level del documento Branch). Una sede
+            // sin NIT (sedes preexistentes que aún no se han editado) muestra
+            // "—" en vez de un campo vacío, para que la columna no se
+            // confunda con celdas vacías de "no hay dato".
+            key: "nit",
+            label: "NIT",
+            hideOnMobile: true,
+            render: (r) => (
+              <span className={r.nit ? "text-neutral-700" : "text-neutral-400"}>
+                {r.nit || "—"}
+              </span>
+            ),
+          },
           {
             key: "dianResponsible",
             label: "Responsable de DIAN",
