@@ -1,3 +1,4 @@
+import KpiCarousel from "../components/KpiCarousel";
 import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { adminApi } from "../services/api";
@@ -9,18 +10,55 @@ import ActionsMenu from "../components/ActionsMenu";
 import LogoLoader from "../components/LogoLoader";
 import PendingDidiPaymentsModal from "../components/PendingDidiPaymentsModal";
 import MoreFiltersModal from "../components/MoreFiltersModal";
-import { formatDateTime, todayColombia, dayOfWeekForDateString } from "../utils/timezone";
+import { Search, Calendar, Plus, ShoppingBag, BadgeCheck, Wallet, Copy, Check, type LucideIcon } from "lucide-react";
+import { formatDate, formatTime, formatDateTime, todayColombia, dayOfWeekForDateString } from "../utils/timezone";
 
 const statusColors: Record<string, string> = {
-  PENDING: "bg-amber-50 text-amber-600",
-  SENT: "bg-blue-50 text-blue-600",
-  APPROVED: "bg-green-50 text-green-600",
-  REJECTED: "bg-red-50 text-red-600",
+  PENDING: "bg-amber-50 text-amber-700 border-amber-200/60",
+  SENT: "bg-blue-50 text-blue-700 border-blue-200/60",
+  APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+  REJECTED: "bg-red-50 text-red-700 border-red-200/60",
   // Estado terminal de una venta category: "REGULAR" — nunca hubo (ni
   // habrá) intento de emisión, así que no es ni un error (rojo) ni algo en
   // curso (ámbar) — gris neutro, ver punto 37 de backend/CLAUDE.md.
-  NOT_EMITTED: "bg-neutral-100 text-neutral-500",
+  NOT_EMITTED: "bg-zinc-100 text-zinc-600 border-zinc-200/60",
 };
+
+const money = (value: number) => `$${Math.round(value).toLocaleString("es-CO")}`;
+
+function SalesKpi({ label, value, detail, icon: Icon, loading }: {
+  label: string; value: string; detail: string; icon: LucideIcon; loading: boolean;
+}) {
+  return <section aria-busy={loading} className="rounded-2xl border border-zinc-200/80 bg-white p-5 shadow-sm">
+    <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-xs font-medium text-zinc-500">{label}</h2><Icon size={19} className="text-orange-500" aria-hidden="true" /></div>
+    <p className="text-2xl font-bold tracking-tight tabular-nums text-zinc-900">{loading ? "…" : value}</p>
+    <p className="mt-2 text-xs leading-5 text-zinc-500">{loading ? "Calculando…" : detail}</p>
+  </section>;
+}
+
+function CopySaleId({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    if (!copied) return;
+    const timeout = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [copied]);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(value); setCopied(true); }
+    catch { Swal.fire({ title: "No se pudo copiar", text: value, icon: "info" }); }
+  };
+  return <button type="button" onClick={copy} title={value} aria-label={`Copiar CUFE o ID: ${value}`} className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs text-zinc-600 transition hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><span>{value.length > 10 ? `${value.slice(0, 10)}…` : value}</span>{copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}<span className="sr-only" role="status">{copied ? "Copiado" : ""}</span></button>;
+}
+
+function downloadTicket(sale: any) {
+  const lines = ["Mecatos el Santi — Ticket de venta", `ID: ${sale._id}`, `Fecha: ${formatDateTime(sale.createdAt)}`, `Sede: ${sale.branchId?.name || "—"}`, `Usuario: ${sale.cashierId?.name || "—"}`, "", ...(sale.items || []).map((item: any) => `${item.quantity} × ${item.name} — ${money(item.subtotal ?? item.price * item.quantity)}`), "", `Total: ${money(sale.total)}`, `Estado: ${sale.status || "—"}`, "Este ticket no sustituye la factura electrónica."];
+  const url = URL.createObjectURL(new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `ticket-${sale._id}.txt`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 // Etiqueta en español para la columna "Estado DIAN" — antes mostraba el
 // valor crudo del enum (`s.dianStatus`, en inglés) directo en la tabla,
@@ -117,6 +155,9 @@ export default function Ventas() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [totalAmount, setTotalAmount] = useState(0);
+  const [summary, setSummary] = useState<{ approved: number; notEmitted: number; other: number; count: number; primary: string; primaryCount: number } | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(true);
+  const [summaryRevision, setSummaryRevision] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   // Cuenta GLOBAL de ventas DiDi/Rappi pendientes (para el banner de
   // miércoles) — independiente de `total`, que es el conteo de la tabla
@@ -143,7 +184,6 @@ export default function Ventas() {
         pageSize,
       })
       .then((res) => {
-        console.log(res);
         setSales(res.data);
         setTotal(res.total);
         setTotalAmount(res.totalAmount);
@@ -169,7 +209,38 @@ export default function Ventas() {
       .catch(() => setPendingDidiCount(0));
   };
 
+  const refresh = () => { load(); setSummaryRevision((value) => value + 1); };
+
   useEffect(load, [selectedBranch, dianStatus, category, paymentMethod, cashierId, search, date, page, isMobile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSummaryLoading(true);
+    setSummary(null);
+    const collectSummary = async () => {
+      let currentPage = 1;
+      let lastPage = 1;
+      let approved = 0, notEmitted = 0, count = 0;
+      const methods: Record<string, number> = {};
+      do {
+        const result = await adminApi.listSales({ branchId: selectedBranch || undefined, dianStatus: dianStatus || undefined, category: category || undefined, paymentMethod: paymentMethod || undefined, cashierId: cashierId || undefined, search: search.trim() || undefined, from: date || undefined, to: date || undefined, page: currentPage, pageSize: 100 });
+        for (const sale of result.data) {
+          if (sale.status === "CANCELLED") continue;
+          count += 1;
+          if (sale.dianStatus === "APPROVED") approved += 1;
+          if (sale.dianStatus === "NOT_EMITTED") notEmitted += 1;
+          const method = paymentMethodLabels[sale.paymentMethod] || sale.paymentMethod || "Sin método";
+          methods[method] = (methods[method] || 0) + 1;
+        }
+        lastPage = result.totalPages;
+        currentPage += 1;
+      } while (currentPage <= lastPage && !cancelled);
+      const primary = Object.entries(methods).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))[0];
+      if (!cancelled) setSummary({ approved, notEmitted, other: count - approved - notEmitted, count, primary: primary?.[0] || "Sin ventas", primaryCount: primary?.[1] || 0 });
+    };
+    collectSummary().catch(() => { if (!cancelled) setSummary(null); }).finally(() => { if (!cancelled) setSummaryLoading(false); });
+    return () => { cancelled = true; };
+  }, [selectedBranch, dianStatus, category, paymentMethod, cashierId, search, date, summaryRevision]);
 
   // Cambiar de sede/filtro/categoría debe volver a la página 1 — si no, se
   // podría quedar en una página que ya no existe para el nuevo filtro.
@@ -189,11 +260,11 @@ export default function Ventas() {
 
   const handleCancel = async (sale: any) => {
     const result = await Swal.fire({
-      title: "¿Eliminar esta venta?",
+      title: "¿Anular esta venta?",
       text: "La venta quedará cancelada (no se borra el registro). Si había descontado stock, se restaura.",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Eliminar",
+      confirmButtonText: "Anular",
       cancelButtonText: "Cancelar",
       confirmButtonColor: "#ef4444",
       cancelButtonColor: "#a3a3a3",
@@ -202,7 +273,7 @@ export default function Ventas() {
 
     try {
       await adminApi.cancelSale(sale._id);
-      load();
+      refresh();
       Swal.fire({ title: "Venta cancelada", icon: "success", timer: 1500, showConfirmButton: false });
     } catch (err: any) {
       Swal.fire({ title: "Error", text: err.message || "No se pudo cancelar la venta", icon: "error" });
@@ -229,7 +300,7 @@ export default function Ventas() {
 
     try {
       await adminApi.confirmSalePayment(sale._id);
-      load();
+      refresh();
       Swal.fire({ title: "Pago confirmado", icon: "success", timer: 1500, showConfirmButton: false });
     } catch (err: any) {
       Swal.fire({ title: "Error", text: err.message || "No se pudo confirmar el pago", icon: "error" });
@@ -287,6 +358,12 @@ export default function Ventas() {
 
   return (
     <div className="space-y-4">
+      <KpiCarousel label="Métricas de ventas">
+        <SalesKpi label="Total Vendido" value={money(totalAmount)} detail={`${total} ${total === 1 ? "venta" : "ventas"} · ${date || "Todo el historial"}`} icon={ShoppingBag} loading={loading} />
+        <SalesKpi label="Estado DIAN" value={summary ? `${summary.count ? (summary.approved / summary.count * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 }) : 0}% aprobadas` : "—"} detail={summary ? `${summary.approved} aprobadas · ${summary.notEmitted} no emitidas · ${summary.other} pendientes, enviadas o rechazadas` : "No se pudo cargar el desglose"} icon={BadgeCheck} loading={summaryLoading} />
+        <SalesKpi label="Canal Principal" value={summary?.primary || "—"} detail={summary ? `${summary.primaryCount} de ${summary.count} ventas · Método de pago predominante` : "No se pudo cargar el desglose"} icon={Wallet} loading={summaryLoading} />
+      </KpiCarousel>
+      <p className="text-xs text-zinc-400">Métricas según los filtros seleccionados; el desglose DIAN y de pagos excluye ventas canceladas.</p>
       {showWednesdayBanner && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 flex items-center justify-between gap-3 text-sm">
           <span>
@@ -307,12 +384,13 @@ export default function Ventas() {
 
       {!isMobile && (
         <>
-          <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
+          <div className="inline-flex bg-zinc-100 rounded-xl p-1 gap-1 text-sm font-medium">
             {categoryTabs.map((tab) => (
               <button
                 key={tab.value}
                 onClick={() => setCategory(tab.value)}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                aria-pressed={category === tab.value}
+                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   category === tab.value
                     ? "bg-white text-neutral-800 shadow-sm"
                     : "text-neutral-500 hover:text-neutral-700"
@@ -323,24 +401,15 @@ export default function Ventas() {
             ))}
           </div>
 
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4">
             <div className="flex flex-wrap gap-3">
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar por CUFE o ID..."
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base w-56 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
-              />
+              <div className="relative"><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" /><input aria-label="Buscar por CUFE o ID" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por CUFE o ID…" className="w-56 rounded-xl border border-zinc-200 py-2 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
+              <div className="relative"><Calendar size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" /><input type="date" aria-label="Fecha de ventas" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl border border-zinc-200 py-2 pl-10 pr-3 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
               <select
+                aria-label="Usuario"
                 value={cashierId}
                 onChange={(e) => setCashierId(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               >
                 <option value="">Usuario: todos</option>
                 {cashierOptions.map((u) => (
@@ -350,9 +419,10 @@ export default function Ventas() {
                 ))}
               </select>
               <select
+                aria-label="Método de pago"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               >
                 <option value="">Método de pago: todos</option>
                 {Object.entries(paymentMethodFilterOptions).map(([value, label]) => (
@@ -367,14 +437,15 @@ export default function Ventas() {
                   propia lista/selección/confirmación. */}
               <button
                 onClick={() => setPendingModalOpen(true)}
-                className="px-3 py-2 rounded-lg text-base border bg-white border-neutral-200 text-neutral-600 hover:bg-neutral-50 transition-colors"
+                className="px-3 py-1.5 text-xs rounded-lg border bg-white border-zinc-200 text-zinc-600 hover:bg-orange-50 hover:text-orange-600 transition-colors"
               >
                 Pendientes DiDi
               </button>
               <select
+                aria-label="Estado DIAN"
                 value={dianStatus}
                 onChange={(e) => setDianStatus(e.target.value)}
-                className="border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20"
               >
                 <option value="">Estado DIAN: todos</option>
                 <option value="PENDING">Pendiente</option>
@@ -385,14 +456,11 @@ export default function Ventas() {
               </select>
             </div>
             <div className="flex flex-col items-start gap-3 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4">
-              <div className="text-sm text-neutral-500">
-                Total: <span className="font-bold text-neutral-800">${totalAmount.toLocaleString("es-CO")}</span>
-              </div>
               <button
                 onClick={() => setModalOpen(true)}
-                className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg w-full sm:w-auto shrink-0"
+                className="flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
               >
-                + Agregar venta
+                <Plus size={16} aria-hidden="true" /> Agregar venta
               </button>
             </div>
           </div>
@@ -447,7 +515,7 @@ export default function Ventas() {
         <MoreFiltersModal onClose={() => setFiltersModalOpen(false)} onClear={clearFilters}>
           <div>
             <label className="text-xs text-neutral-500 mb-1 block">Categoría</label>
-            <div className="inline-flex bg-neutral-100 rounded-lg p-1 gap-1">
+            <div className="inline-flex bg-zinc-100 rounded-xl p-1 gap-1 text-sm font-medium">
               {categoryTabs.map((tab) => (
                 <button
                   key={tab.value}
@@ -532,7 +600,7 @@ export default function Ventas() {
                     visibles) para que sean lo primero que aparece con
                     scroll en celular — mismo criterio que "Monto" en
                     Compras.tsx, ver punto 36 de CLAUDE.md. */}
-                <th className="p-3 whitespace-nowrap">Total</th>
+                <th className="p-3 whitespace-nowrap text-right">Total</th>
                 <th className="p-3 whitespace-nowrap">Estado DIAN</th>
                 <th className="p-3 whitespace-nowrap">Usuario</th>
                 <th className="p-3 whitespace-nowrap">Método de Pago</th>
@@ -574,19 +642,12 @@ export default function Ventas() {
                   s.orderType === "DIDI" ||
                   s.orderType === "RAPPI";
                 return (
-                  <tr key={s._id} className={`border-t border-neutral-50 ${cancelled ? "opacity-60" : ""}`}>
-                    <td
-                      className="p-3 text-xs text-neutral-500 font-mono truncate max-w-[140px]"
-                      title={s.category === "SPECIAL" ? s.cufe || "" : String(s._id)}
-                    >
-                      {s.category === "SPECIAL" ? s.cufe || "—" : String(s._id).slice(-8).toUpperCase()}
-                    </td>
-                    <td className="p-3 text-neutral-500">
-                      {formatDateTime(s.createdAt)}
-                    </td>
-                    <td className="p-3 font-medium">${s.total.toLocaleString("es-CO")}</td>
+                  <tr key={s._id} className={`border-t border-zinc-100 transition-colors hover:bg-zinc-50/80 ${cancelled ? "opacity-60" : ""}`}>
+                    <td className="p-3"><CopySaleId value={String(s.cufe || s._id)} /></td>
+                    <td className="p-3 whitespace-nowrap"><p className="font-medium text-zinc-700">{formatDate(s.createdAt, { day: "2-digit", month: "short", year: "numeric" })}</p><p className="mt-1 text-xs text-zinc-400">{formatTime(s.createdAt, { hour: "2-digit", minute: "2-digit", hour12: true })}</p></td>
+                    <td className="p-3 text-right font-semibold tabular-nums text-zinc-900">{money(s.total)}</td>
                     <td className="p-3">
-                      <span className={`text-xs px-2 py-1 rounded-full ${statusColors[s.dianStatus]}`}>
+                      <span className={`whitespace-nowrap border text-xs px-2.5 py-0.5 rounded-full ${statusColors[s.dianStatus] || statusColors.NOT_EMITTED}`}>
                         {dianStatusLabels[s.dianStatus] || s.dianStatus}
                       </span>
                       {cancelled && (
@@ -621,23 +682,18 @@ export default function Ventas() {
                         {s.category === "SPECIAL" ? "Especial" : "Regular"}
                       </span>
                     </td>
-                    <td className="p-3">{s.branchId?.name || "—"}</td>
+                    <td className="p-3"><span title={s.branchId?.name} className="whitespace-nowrap rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">{s.branchId?.name?.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "") || s.branchId?.name || "—"}</span></td>
                     <td className="p-3 sticky right-0 z-10 bg-white border-l border-neutral-200">
                       <div className="flex justify-center">
                         <ActionsMenu
                           items={[
-                            /** 
-                            ...(!cancelled
-                              ? [{ label: "Editar", onClick: () => setEditingSale(s) }]
-                              : []),*/
-                            { label: "Ver recibo", onClick: () => setViewingSale(s) },
+                            { label: "Ver detalle", onClick: () => setViewingSale(s) },
+                            { label: "Descargar ticket", onClick: () => downloadTicket(s) },
+                            { label: "Reemitir DIAN", disabled: true, title: "La API no dispone de una operación de reemisión manual", onClick: () => {} },
                             ...(!cancelled && isDeliveryAppSale && s.paymentStatus === "PENDING_PAYMENT"
                               ? [{ label: "Confirmar Pago", onClick: () => handleConfirmPayment(s) }]
                               : []),
-                            /**  
-                            ...(!cancelled
-                              ? [{ label: "Eliminar", danger: true, onClick: () => handleCancel(s) }]
-                              : []),*/ 
+                            ...(!cancelled ? [{ label: "Anular", danger: true, onClick: () => handleCancel(s) }] : []),
                           ]}
                         />
                       </div>
@@ -678,7 +734,7 @@ export default function Ventas() {
         <SaleModal
           initialBranchId={selectedBranch || undefined}
           onClose={() => setModalOpen(false)}
-          onSaved={load}
+          onSaved={refresh}
         />
       )}
 
@@ -686,7 +742,7 @@ export default function Ventas() {
         <SaleEditModal
           sale={editingSale}
           onClose={() => setEditingSale(null)}
-          onSaved={load}
+          onSaved={refresh}
         />
       )}
 
@@ -698,7 +754,7 @@ export default function Ventas() {
         <PendingDidiPaymentsModal
           branchId={selectedBranch || undefined}
           onClose={() => setPendingModalOpen(false)}
-          onConfirmed={load}
+          onConfirmed={refresh}
         />
       )}
     </div>

@@ -6,6 +6,8 @@ export interface ActionsMenuItem {
   label: string;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
+  title?: string;
 }
 
 interface ActionsMenuProps {
@@ -71,11 +73,13 @@ export default function ActionsMenu({ items }: ActionsMenuProps) {
               <button
                 key={i}
                 type="button"
+                disabled={item.disabled}
+                title={item.title}
                 onClick={() => {
                   setOpen(false);
                   item.onClick();
                 }}
-                className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 ${
+                className={`w-full text-left px-3 py-2 text-sm hover:bg-neutral-50 disabled:opacity-40 disabled:cursor-not-allowed ${
                   item.danger ? "text-red-500" : "text-neutral-700"
                 }`}
               >

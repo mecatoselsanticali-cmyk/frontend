@@ -1,5 +1,6 @@
+import KpiCarousel from "../components/KpiCarousel";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import {
   AreaChart,
   Area,
@@ -13,10 +14,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
   Label,
 } from "recharts";
-import { CircleCheck, TriangleAlert } from "lucide-react";
+import { CircleCheck, TriangleAlert, Receipt, Banknote, CreditCard, Landmark, RotateCcw, Wallet, Plus } from "lucide-react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { adminApi } from "../services/api";
@@ -95,18 +95,34 @@ const presetLabels: { value: DatePreset; label: string }[] = [
 // Tarjeta de KPI simple (Ventas/Compras/Gastos/Rentabilidad) — mismo
 // patrón visual (`bg-white rounded-xl border`) que el resto de widgets de
 // este dashboard, pero sin gráfico: solo una etiqueta y un monto grande.
-function StatCard({ label, value, valueClassName = "text-neutral-800", isMobile }: { label: string; value: string; valueClassName?: string; isMobile?: boolean }) {
+function StatCard({ label, value, badge, trend }: {
+  label: string;
+  value: string;
+  badge?: { label: string; positive: boolean };
+  trend?: number;
+}) {
   return (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5">
-      <h3 className="text-sm text-neutral-500 mb-1">{label}</h3>
-      <p className={`${isMobile ? "text-lg" : "text-2xl"} font-bold ${valueClassName}`}>{value}</p>
+    <div className="rounded-xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:p-6">
+      <h3 className="mb-3 text-xs font-medium text-zinc-500">{label}</h3>
+      <p className="break-words text-xl font-bold tracking-tight text-zinc-900 lg:text-2xl">{value}</p>
+      {(badge || trend !== undefined) && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {badge && <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-700"}`}>{badge.label}</span>}
+          {trend !== undefined && <span className="text-xs text-zinc-500">{trend > 0 ? "+" : ""}{trend}% vs período anterior</span>}
+        </div>
+      )}
     </div>
   );
 }
 
+function sentenceCase(value: string) {
+  const text = value.trim().toLocaleLowerCase("es-CO");
+  return text.charAt(0).toLocaleUpperCase("es-CO") + text.slice(1);
+}
+
 function SkeletonCard({ className = "" }: { className?: string }) {
   return (
-    <div className={`bg-white rounded-xl border border-neutral-100 p-5 animate-pulse ${className}`}>
+    <div className={`bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 animate-pulse ${className}`}>
       <div className="h-4 w-32 bg-neutral-200 rounded mb-4" />
       <div className="h-40 bg-neutral-100 rounded" />
     </div>
@@ -170,8 +186,8 @@ function Carousel({ slides }: { slides: React.ReactNode[] }) {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: "none" }}
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+        
       >
         {slides.map((slide, i) => (
           <div key={i} className="w-full shrink-0 snap-center">
@@ -198,7 +214,12 @@ function Carousel({ slides }: { slides: React.ReactNode[] }) {
 export default function Dashboard() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [selectedBranch] = useSelectedBranch();
+  const [selectedBranch, setSelectedBranch] = useSelectedBranch();
+  const { branches, lockedBranchName, isManager } = useOutletContext<{
+    branches: { _id: string; name: string }[];
+    lockedBranchName?: string;
+    isManager: boolean;
+  }>();
   const { admin, completeOnboarding } = useAuthSession();
   const [preset, setPreset] = useState<DatePreset>("today");
   const [customFrom, setCustomFrom] = useState(todayColombia());
@@ -283,7 +304,9 @@ export default function Dashboard() {
   const summary = metrics?.summary;
   const salesTimeline = metrics?.salesTimeline || [];
   const timelineGranularity: "hour" | "day" = metrics?.timelineGranularity || "hour";
-  const topProducts = metrics?.topProducts || [];
+  const topProducts = (metrics?.topProducts || []).map((product: any) => ({ ...product, name: sentenceCase(product.name) }));
+  const totalUnits = topProducts.reduce((sum: number, product: any) => sum + product.quantity, 0);
+  const paymentTotal = (metrics?.paymentMethods || []).reduce((sum: number, method: any) => sum + Math.abs(method.amount), 0);
   const expensesByCategory = (metrics?.expensesByCategory || []).map((e: any) => ({
     ...e,
     category: expenseCategoryLabels[e.category] || e.category,
@@ -331,7 +354,7 @@ export default function Dashboard() {
   // celular (ver useIsMobile arriba) — así ningún gráfico de Recharts se
   // monta dos veces.
   const salesTimelineWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
+    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">
         Comportamiento de ventas ({timelineGranularity === "hour" ? "por hora" : "por día"})
       </h3>
@@ -342,19 +365,21 @@ export default function Dashboard() {
           <AreaChart data={salesTimeline} margin={{ left: 0, right: 8 }}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={BRAND} stopOpacity={0.35} />
-                <stop offset="95%" stopColor={BRAND} stopOpacity={0.03} />
+                <stop offset="5%" stopColor={BRAND} stopOpacity={0.16} />
+                <stop offset="95%" stopColor={BRAND} stopOpacity={0.01} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
             <XAxis
               dataKey="label"
+              className="text-xs text-zinc-400"
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
               ticks={hourTicks}
             />
             <YAxis
+              className="text-xs text-zinc-400"
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
@@ -386,18 +411,19 @@ export default function Dashboard() {
   );
 
   const topProductsWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
+    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Top 5 productos</h3>
       {!hasTopProducts ? (
         <EmptyState message="No hay productos vendidos en el rango seleccionado" />
       ) : (
-        <ResponsiveContainer width="100%" height={220}>
+        <div>
+        <ResponsiveContainer width="100%" height={190}>
           <PieChart>
             <Pie
               data={topProducts}
               dataKey="quantity"
               nameKey="name"
-              innerRadius={45}
+              innerRadius={60}
               outerRadius={75}
               paddingAngle={2}
             >
@@ -432,39 +458,47 @@ export default function Dashboard() {
               formatter={(v: number, _n, entry: any) => [`${v} uds. (${entry.payload.percentage}%)`, entry.payload.name]}
               contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: "#e5e5e5" }}
             />
-            <Legend
-              layout="vertical"
-              verticalAlign="middle"
-              align="right"
-              // 11px era difícil de leer — mismo tamaño en las dos leyendas
-              // de este dashboard (Top 5 productos / Gastos por categoría),
-              // ver punto correspondiente si se vuelve a tocar cualquiera
-              // de las dos, para que no queden desincronizadas de nuevo.
-              wrapperStyle={{ fontSize: 13, lineHeight: "20px" }}
-              formatter={(value) => <span className="text-neutral-600">{value}</span>}
-            />
+
           </PieChart>
         </ResponsiveContainer>
+        <ul className="mt-2 space-y-2.5">
+          {topProducts.map((product: any, index: number) => (
+            <li key={product.productId || product.name} className="flex items-center justify-between gap-3 text-xs">
+              <span className="flex min-w-0 items-center gap-2 text-zinc-600">
+                <svg width="8" height="8" className="shrink-0" aria-hidden="true"><circle cx="4" cy="4" r="4" fill={CHART_COLORS[index % CHART_COLORS.length]} /></svg>
+                <span className="truncate" title={product.name}>{product.name}</span>
+              </span>
+              <span className="shrink-0 tabular-nums text-zinc-500">{product.quantity} uds. · {totalUnits ? (product.quantity / totalUnits * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 }) : 0}%</span>
+            </li>
+          ))}
+        </ul>
+        </div>
       )}
     </div>
   );
 
   const expensesWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
+    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Gastos por categoría</h3>
       {!hasExpenses ? (
-        <EmptyState message="No hay gastos registrados en el rango seleccionado" />
+        <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
+          <div className="rounded-full bg-zinc-50 p-3"><Receipt size={28} className="text-zinc-300" aria-hidden="true" /></div>
+          <p className="max-w-60 text-sm text-zinc-500">No hay gastos registrados en el rango seleccionado</p>
+          <button type="button" onClick={() => navigate("/gastos?new=true")} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 transition hover:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><Plus size={14} /> Registrar gasto</button>
+        </div>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={expensesByCategory} margin={{ left: 8, right: 8, top: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
             <XAxis
               dataKey="category"
+              className="text-xs text-zinc-400"
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
+              className="text-xs text-zinc-400"
               tick={{ fontSize: 11, fill: "#a3a3a3" }}
               axisLine={false}
               tickLine={false}
@@ -494,18 +528,26 @@ export default function Dashboard() {
   );
 
   const paymentMethodsWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full">
+    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Transacciones por método de pago</h3>
       <div className="divide-y divide-neutral-50">
         {paymentMethods.map((m: any) => {
           const isReturns = m.method.startsWith("Devoluciones");
+          const MethodIcon = isReturns ? RotateCcw : /efectivo|cash/i.test(m.method) ? Banknote : /tarjeta|card/i.test(m.method) ? CreditCard : /banco|transfer/i.test(m.method) ? Landmark : Wallet;
+          const percentage = paymentTotal ? Math.abs(m.amount) / paymentTotal * 100 : 0;
           return (
-            <div key={m.method} className="flex justify-between items-center py-2 text-sm">
-              <span className="text-neutral-500">{m.method}</span>
-              <span className={`font-semibold ${isReturns ? "text-red-500" : "text-neutral-800"}`}>
-                {isReturns && m.amount > 0 ? "-" : ""}
-                {money(m.amount)}
-              </span>
+            <div key={m.method} className="border-b border-zinc-100 py-3 last:border-0">
+              <div className="flex items-center justify-between gap-3 py-2 text-sm">
+                <span className="flex min-w-0 items-center gap-3 text-zinc-500"><MethodIcon size={17} className="shrink-0 text-zinc-400" aria-hidden="true" />{m.method}</span>
+                <span className={`shrink-0 font-semibold tabular-nums ${isReturns ? "text-red-600" : "text-zinc-900"}`}>
+                  {isReturns && m.amount > 0 ? "-" : ""}{money(m.amount)}
+                </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                <svg className="h-full w-full" preserveAspectRatio="none" viewBox="0 0 100 6" role="img" aria-label={`${m.method}: ${percentage.toFixed(1)}% del movimiento total`}>
+                  <rect width={percentage} height={6} rx={3} className={isReturns ? "fill-red-300" : "fill-orange-400"} />
+                </svg>
+              </div>
             </div>
           );
         })}
@@ -520,17 +562,17 @@ export default function Dashboard() {
   // el rango elegido), de ahí el color condicional.
   const profitability = summary?.profitability ?? 0;
   const statsWidget = (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-      <StatCard label="Ventas" value={money(summary?.netTotal || 0)} isMobile={isMobile} />
-      <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} isMobile={isMobile} />
-      <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} isMobile={isMobile} />
+    <KpiCarousel label="Métricas del dashboard" desktopColumns={4}>
+      <StatCard label="Ventas" value={money(summary?.netTotal || 0)} />
+      <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} />
+      <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} />
       <StatCard
         label="Rentabilidad"
         value={profitability < 0 ? `-${money(Math.abs(profitability))}` : money(profitability)}
-        valueClassName={profitability < 0 ? "text-red-500" : "text-green-600"}
-        isMobile={isMobile}
+        badge={{ label: profitability < 0 ? "Balance negativo" : profitability > 0 ? "Balance positivo" : "Sin variación", positive: profitability >= 0 }}
+       
       />
-    </div>
+    </KpiCarousel>
   );
 
   // Widget "Stock Crítico" (ver punto 62 de CLAUDE.md) — reemplaza al
@@ -541,7 +583,7 @@ export default function Dashboard() {
   // comentario del backend en `getCriticalStockProducts`. Solo respeta
   // la sede elegida en la topbar.
   const criticalStockWidget = (
-    <div className="bg-white rounded-xl border border-neutral-100 p-5 h-full flex flex-col">
+    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3 gap-2">
         <h3 className="font-semibold text-neutral-700">Stock Crítico</h3>
         {hasCriticalStock && (
@@ -573,15 +615,15 @@ export default function Dashboard() {
                 className="flex items-center justify-between gap-3 py-1.5 border-b border-neutral-50 last:border-0"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-neutral-700 truncate">{p.name}</p>
+                  <p className="text-sm font-medium text-neutral-700 truncate">{sentenceCase(p.name)}</p>
                   <p className="text-xs text-neutral-400">{p.sku}</p>
                 </div>
                 <span
-                  className={`shrink-0 text-xs font-semibold px-2 py-1 rounded-full ${
-                    isOut ? "bg-red-100 text-red-600" : "bg-orange-100 text-orange-600"
+                  className={`shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                    isOut ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-600"
                   }`}
                 >
-                  {hasThreshold ? `${p.quantity} / ${p.minStock} unds` : "Sin stock"}
+                  {isOut ? "Sin stock" : hasThreshold ? `${p.quantity} / ${p.minStock} unds` : `${p.quantity} unds`}
                 </span>
               </div>
             );
@@ -603,11 +645,17 @@ export default function Dashboard() {
   return (
     <div className="space-y-4">
       {/* Barra de filtros superior */}
-      <div className="bg-white rounded-xl border border-neutral-100 p-3 flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-zinc-200/70 bg-white p-4 shadow-sm" aria-label="Filtros del dashboard">
+        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
+          Sede
+          {isManager ? <span data-tour="branch-selector" className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700">{lockedBranchName || "Sede asignada"}</span> : <select data-tour="branch-selector" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"><option value="">Todas las sedes</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.name}</option>)}</select>}
+        </label>
+        <label className="flex flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
+          Rango de fecha
         <select
           value={preset}
           onChange={(e) => setPreset(e.target.value as DatePreset)}
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+          className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
         >
           {presetLabels.map((p) => (
             <option key={p.value} value={p.value}>
@@ -615,38 +663,39 @@ export default function Dashboard() {
             </option>
           ))}
         </select>
+        </label>
 
         {preset === "custom" && (
           <>
             <input
               type="date"
+              aria-label="Fecha inicial"
               value={customFrom}
               onChange={(e) => setCustomFrom(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+              className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
             <span className="text-neutral-400 text-sm">a</span>
             <input
               type="date"
+              aria-label="Fecha final"
               value={customTo}
               onChange={(e) => setCustomTo(e.target.value)}
-              className="border border-neutral-200 rounded-lg px-3 py-2 text-base"
+              className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </>
         )}
 
-        <span className="text-xs text-neutral-400 ml-auto">
-          La sede se filtra con el selector de la barra superior.
-        </span>
+
       </div>
 
       {loading ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <KpiCarousel label="Métricas del dashboard" desktopColumns={4}>
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
-          </div>
+          </KpiCarousel>
           {isMobile ? (
             <div className="space-y-4">
               <SkeletonCard />
@@ -665,7 +714,7 @@ export default function Dashboard() {
         </div>
       ) : isMobile ? (
         // Móvil: Ventas/Compras/Gastos/Rentabilidad van arriba en un grid
-        // 2x2 (ya son 4 tarjetas simples, no necesitan carrusel), luego la
+        // carrusel de KPI, luego la
         // venta por hora/día a ancho completo, y los otros 4 widgets se
         // agrupan en 2 carruseles de a 2 para no apilar 4 tarjetas seguidas
         // en una pantalla angosta (pedido explícito).

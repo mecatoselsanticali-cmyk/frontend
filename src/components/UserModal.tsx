@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { adminApi } from "../services/api";
 import Swal from "sweetalert2";
 
 interface UserModalProps {
   user?: any; // si viene, el modal edita en vez de crear
   initialBranchId?: string;
+  focusCredentials?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -18,8 +19,12 @@ const emptyForm = {
   pin: "",
 };
 
-export default function UserModal({ user, initialBranchId, onClose, onSaved }: UserModalProps) {
+export default function UserModal({ user, initialBranchId, focusCredentials = false, onClose, onSaved }: UserModalProps) {
   const isEditing = Boolean(user);
+  const credentialsRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (focusCredentials) credentialsRef.current?.focus();
+  }, [focusCredentials]);
   const [branches, setBranches] = useState<any[]>([]);
   const [me, setMe] = useState<{ id: string } | null>(null);
   const [form, setForm] = useState(
@@ -184,6 +189,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
               <div>
                 <label className="text-xs text-neutral-500">PIN (4 dígitos)</label>
                 <input
+                  ref={credentialsRef}
                   maxLength={4}
                   value={form.pin}
                   onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
@@ -204,6 +210,7 @@ export default function UserModal({ user, initialBranchId, onClose, onSaved }: U
                   <div>
                     <label className="text-xs text-neutral-500">Contraseña (opcional)</label>
                     <input
+                      ref={credentialsRef}
                       type="password"
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}

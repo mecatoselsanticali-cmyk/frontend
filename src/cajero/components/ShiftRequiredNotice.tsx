@@ -30,11 +30,14 @@ export default function ShiftRequiredNotice() {
   }, []);
 
   return (
-    <div className="relative h-full w-full flex items-center justify-center overflow-hidden bg-neutral-50 px-4">
+    <div className="relative h-full max-h-full w-full overflow-hidden bg-neutral-50">
       <div className="pointer-events-none absolute -top-24 -left-16 w-72 h-72 rounded-full blur-3xl bg-brand-200/40" />
       <div className="pointer-events-none absolute -bottom-28 -right-16 w-80 h-80 rounded-full blur-3xl bg-red-200/30" />
 
-      <div className="relative w-full max-w-sm flex flex-col items-center">
+      {/* Los márgenes automáticos centran el bloque si cabe; en pantallas
+          bajas vuelven a cero y permiten desplazarlo sin cortar el inicio. */}
+      <div className="relative flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain px-4 py-6 md:py-0">
+      <div className="relative mx-auto my-auto flex w-full max-w-sm shrink-0 flex-col items-center">
         <img
           src="/img/logo-santi-trimmed.webp"
           alt="Mecatos el Santi"
@@ -64,6 +67,7 @@ export default function ShiftRequiredNotice() {
             Iniciar turno
           </button>
         </div>
+      </div>
       </div>
     </div>
   );

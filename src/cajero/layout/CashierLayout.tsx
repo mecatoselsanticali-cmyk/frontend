@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,7 +7,8 @@ import { posApi } from "../services/posApi";
 import { syncPendingSales } from "../services/syncService";
 import { ReceiptText, ShoppingCart, Wallet } from "lucide-react";
 import ShiftModal from "../components/modals/ShiftModal";
-import MobileBlockScreen from "../components/MobileBlockScreen";
+import MobileCashierHeader from "../components/MobileCashierHeader";
+import ShiftRequiredNotice from "../components/ShiftRequiredNotice";
 import { useAuthSession } from "../../components/AuthProvider";
 import LogoLoader from "../../components/LogoLoader";
 
@@ -18,12 +19,7 @@ const tabs = [
 
 {/** to: "/cajero/facturas", label: "Facturas", icon: <ReceiptText color="#ffffff" size={20} />**/}
 
-// Los cajeros solo trabajan desde el computador de la caja (ver punto 36
-// de admin-frontend/CLAUDE.md) — a diferencia del `useIsMobile()` de
-// Dashboard.tsx (que decide qué widgets montar), acá la única acción es
-// bloquear TODA la zona de cajero con `MobileBlockScreen`, así que un
-// simple `matchMedia` sin re-render condicional de contenido complejo
-// alcanza. Mismo breakpoint (767px) para no introducir un umbral nuevo.
+// Comparte el breakpoint md de Tailwind: ventas solo en escritorio.
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.matchMedia("(max-width: 767px)").matches);
   useEffect(() => {
@@ -37,6 +33,7 @@ function useIsMobile() {
 
 export default function CashierLayout() {
   const navigate = useNavigate();
+  const location = useLocation();
   const isMobile = useIsMobile();
   const { clearAuthSession } = useAuthSession();
   const setSession = usePosStore((s) => s.setSession);
@@ -109,7 +106,24 @@ export default function CashierLayout() {
   };
 
   if (isMobile) {
-    return <MobileBlockScreen onLogout={logout} />;
+    return (
+      <div className="fixed inset-0 box-border flex h-dvh max-h-dvh w-full flex-col overflow-hidden bg-neutral-50 pt-16 md:hidden">
+        <MobileCashierHeader shiftActive={Boolean(shiftId)} onCloseShift={() => openModal("SHIFT")} onLogout={logout} />
+        <main className="min-h-0 min-w-0 flex-1 overflow-hidden">
+          {!shiftChecked ? (
+            <div className="flex h-full items-center justify-center"><LogoLoader text="Verificando turno..." /></div>
+          ) : !shiftId ? (
+            <ShiftRequiredNotice />
+          ) : location.pathname === "/cajero/compras" ? (
+            <Outlet />
+          ) : (
+            <Navigate to="/cajero/compras" replace />
+          )}
+        </main>
+        {activeModal === "SHIFT" && <ShiftModal />}
+        <ToastContainer position="top-center" autoClose={2500} theme="light" />
+      </div>
+    );
   }
 
   return (

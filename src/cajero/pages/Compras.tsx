@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { posApi } from "../services/posApi";
 import { usePosStore } from "../store/posStore";
@@ -5,6 +6,7 @@ import PurchaseModal from "../components/PurchaseModal";
 import ShiftRequiredNotice from "../components/ShiftRequiredNotice";
 
 export default function Compras() {
+  const activeModal = usePosStore((s) => s.activeModal);
   const shiftId = usePosStore((s) => s.shiftId);
   const shiftChecked = usePosStore((s) => s.shiftChecked);
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -31,7 +33,7 @@ export default function Compras() {
   const total = purchases.reduce((acc, p) => acc + p.amount, 0);
 
   return (
-    <div className="h-full overflow-y-auto p-6 bg-neutral-50">
+    <div className="h-full overflow-y-auto bg-neutral-50 p-4 pb-28 md:p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-neutral-800">Compras de tu turno</h2>
@@ -41,7 +43,7 @@ export default function Compras() {
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg"
+          className="hidden bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium px-4 py-2 rounded-lg md:block"
         >
           + Nueva compra
         </button>
@@ -70,17 +72,23 @@ export default function Compras() {
                 <span className="text-neutral-300">📦</span>
               )}
             </div>
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="text-sm font-medium">{p.supplierName}</div>
               <div className="text-xs text-neutral-400">
                 {p.concept}
                 {p.productId && p.quantity && ` · ${p.productId.name} x${p.quantity}`}
               </div>
             </div>
-            <div className="text-sm font-semibold">${p.amount.toLocaleString("es-CO")}</div>
+            <div className="shrink-0 text-sm font-semibold tabular-nums">${p.amount.toLocaleString("es-CO")}</div>
           </div>
         ))}
       </div>
+
+      {shiftId && !modalOpen && !activeModal && (
+        <button type="button" onClick={() => setModalOpen(true)} aria-label="Registrar nueva compra" title="Nueva compra" className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-orange-600 text-white shadow-lg shadow-orange-600/30 transition-all hover:bg-orange-700 active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 md:hidden">
+          <Plus size={25} aria-hidden="true" />
+        </button>
+      )}
 
       {modalOpen && (
         <PurchaseModal onClose={() => setModalOpen(false)} onSaved={load} />

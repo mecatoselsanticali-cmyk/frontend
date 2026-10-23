@@ -24,6 +24,7 @@ interface Column {
    * contenido de la celda sigue siendo responsabilidad del `render` de
    * cada columna, no de `DataTable.tsx`. */
   centerHeader?: boolean;
+  align?: "left" | "right";
 }
 
 interface DataTableProps {
@@ -45,7 +46,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
                   key={c.key}
                   className={`p-3 whitespace-nowrap ${c.hideOnMobile ? "hidden sm:table-cell" : ""} ${
                     c.stickyRight ? "sticky right-0 z-10 bg-neutral-50 border-l border-neutral-200" : ""
-                  } ${c.centerHeader ? "text-center" : ""}`}
+                  } ${c.centerHeader ? "text-center" : c.align === "right" ? "text-right" : ""}`}
                 >
                   {c.label}
                 </th>
@@ -74,7 +75,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
                 {columns.map((c) => (
                   <td
                     key={c.key}
-                    className={`p-3 ${c.hideOnMobile ? "hidden sm:table-cell" : ""} ${
+                    className={`p-3 ${c.align === "right" ? "text-right tabular-nums" : ""} ${c.hideOnMobile ? "hidden sm:table-cell" : ""} ${
                       c.stickyRight ? "sticky right-0 z-10 bg-white border-l border-neutral-200" : ""
                     }`}
                   >

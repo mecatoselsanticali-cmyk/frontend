@@ -27,6 +27,7 @@ function useIsMobile() {
 }
 
 interface TopbarProps {
+  hideBranchSelector?: boolean;
   title: string;
   branches: { _id: string; name: string }[];
   selectedBranch: string;
@@ -39,6 +40,7 @@ interface TopbarProps {
 
 export default function Topbar({
   title,
+  hideBranchSelector,
   branches,
   selectedBranch,
   onBranchChange,
@@ -60,7 +62,7 @@ export default function Topbar({
         </button>
         <h2 className="text-xl font-bold text-neutral-800 truncate">{title}</h2>
       </div>
-      {lockedBranchName ? (
+      {!hideBranchSelector && (lockedBranchName ? (
         <span
           data-tour="branch-selector"
           className="border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-600 bg-neutral-50"
@@ -87,7 +89,7 @@ export default function Topbar({
             </option>
           ))}
         </select>
-      )}
+      ))}
     </header>
   );
 }

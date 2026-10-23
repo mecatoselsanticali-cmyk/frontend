@@ -290,7 +290,7 @@ export default function ShiftModal() {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 !m-0 p-4">
       <div
-        className={`relative bg-white rounded-2xl p-6 w-full max-h-[100vh] overflow-y-auto shadow-xl ${
+        className={`relative bg-white rounded-2xl p-6 w-full max-h-[calc(100dvh-2rem)] overflow-y-auto md:max-h-[100vh] shadow-xl ${
           step === "CLOSE" ? "max-w-3xl" : "max-w-lg"
         }`}
       >
@@ -402,7 +402,7 @@ export default function ShiftModal() {
                 el resto del panel para responsividad (ver punto 36 de
                 admin-frontend/CLAUDE.md) — por debajo de eso ambas cajas
                 vuelven a apilarse, aunque en la práctica un celular real
-                nunca llega a ver esto (se bloquea antes, ver punto 39). */}
+                ahora puede abrir y cerrar turno desde esta misma vista. */}
             <div className="grid md:grid-cols-2 gap-6 mb-5 items-start">
               {shiftId && <ShiftSummary shiftId={shiftId} boxRef={setSummaryBoxEl} />}
               <StockVerificationV2 onSummaryChange={setV2Summary} boxHeight={summaryBoxHeight} />

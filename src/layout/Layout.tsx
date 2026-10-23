@@ -108,17 +108,18 @@ export default function Layout() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <Topbar
           title={TITLES[location.pathname] || "Mecatos el Santi"}
           branches={branches}
           selectedBranch={selectedBranch}
           onBranchChange={setSelectedBranch}
           lockedBranchName={lockedBranchName}
+          hideBranchSelector={location.pathname === "/dashboard"}
           onMenuClick={() => setSidebarOpen(true)}
         />
         <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+          <Outlet context={{ branches, lockedBranchName, isManager }} />
         </main>
       </div>
     </div>
