@@ -1,3 +1,4 @@
+import DateRangeFilterMobile from "../components/DateRangeFilterMobile";
 import KpiCarousel from "../components/KpiCarousel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -208,7 +209,11 @@ export default function Gastos() {
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
           <label className="flex min-w-0 items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2.5 text-zinc-400"><Tag size={17} className="shrink-0" aria-hidden="true" /><select aria-label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)} className="min-w-0 w-full bg-white text-sm text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><option value="">Todas las categorías</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          {isMobile ? (
+            <DateRangeFilterMobile from={from} to={to} onChange={(range) => { setFrom(range.from); setTo(range.to); }} />
+          ) : (
           <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2"><legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" /><input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /><span className="text-xs text-zinc-400">a</span><input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></fieldset>
+          )}
           <div className="relative min-w-0 flex-1"><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" /><input aria-label="Buscar por concepto" placeholder="Buscar por concepto…" value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-xl border border-zinc-200 py-2.5 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
           {(category || from || to || search) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50">Limpiar filtros</button>}
         </div>

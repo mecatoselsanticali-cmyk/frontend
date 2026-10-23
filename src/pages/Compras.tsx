@@ -1,3 +1,4 @@
+import ComprasFiltersMobile from "../components/ComprasFiltersMobile";
 import KpiCarousel from "../components/KpiCarousel";
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
@@ -168,20 +169,24 @@ export default function Compras() {
           </div>
         </section>
       </KpiCarousel>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white p-4">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-          <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2">
-            <legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" />
-            <input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-            <span className="text-xs text-zinc-400">a</span>
-            <input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-          </fieldset>
-          <FilterSelect label="Producto" icon={Package} value={productId} onChange={setProductId} options={productOptions} />
-          <FilterSelect label="Usuario" icon={User} value={registeredBy} onChange={setRegisteredBy} options={userOptions} />
-          {(from || to || productId || registeredBy) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-orange-600">Limpiar filtros</button>}
+      {isMobile ? (
+        <ComprasFiltersMobile from={from} to={to} productId={productId} registeredBy={registeredBy} products={productOptions.map((product) => ({ ...product, name: titleCase(product.name) }))} users={userOptions.map((user) => ({ ...user, name: titleCase(user.name) }))} onRangeChange={(range) => { setFrom(range.from); setTo(range.to); }} onProductChange={setProductId} onUserChange={setRegisteredBy} onCreate={() => setModalOpen(true)} onClear={clearFilters} />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white p-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2">
+              <legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" />
+              <input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+              <span className="text-xs text-zinc-400">a</span>
+              <input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            </fieldset>
+            <FilterSelect label="Producto" icon={Package} value={productId} onChange={setProductId} options={productOptions} />
+            <FilterSelect label="Usuario" icon={User} value={registeredBy} onChange={setRegisteredBy} options={userOptions} />
+            {(from || to || productId || registeredBy) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-orange-600">Limpiar filtros</button>}
+          </div>
+          <button type="button" onClick={() => setModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"><Plus size={17} aria-hidden="true" />Nueva compra</button>
         </div>
-        <button type="button" onClick={() => setModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"><Plus size={17} aria-hidden="true" />Nueva compra</button>
-      </div>
+      )}
 
       <DataTable
         loading={loading}

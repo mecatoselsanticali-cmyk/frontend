@@ -1,3 +1,4 @@
+import DateRangeFilterMobile from "../components/DateRangeFilterMobile";
 import KpiCarousel from "../components/KpiCarousel";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
@@ -650,6 +651,21 @@ export default function Dashboard() {
           Sede
           {isManager ? <span data-tour="branch-selector" className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700">{lockedBranchName || "Sede asignada"}</span> : <select data-tour="branch-selector" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"><option value="">Todas las sedes</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.name}</option>)}</select>}
         </label>
+        {isMobile ? (
+          <div className="w-full space-y-1.5">
+            <p className="text-xs font-medium text-zinc-500">Rango de fecha</p>
+            <DateRangeFilterMobile from={from} to={to} onChange={(range) => {
+              if (!range.from && !range.to) {
+                setPreset("today");
+                return;
+              }
+              setCustomFrom(range.from);
+              setCustomTo(range.to);
+              setPreset("custom");
+            }} />
+          </div>
+        ) : (
+          <>
         <label className="flex flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
           Rango de fecha
         <select
@@ -682,6 +698,8 @@ export default function Dashboard() {
               onChange={(e) => setCustomTo(e.target.value)}
               className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
+          </>
+        )}
           </>
         )}
 
