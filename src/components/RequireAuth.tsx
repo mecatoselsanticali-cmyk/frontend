@@ -1,3 +1,4 @@
+import LogoLoader from "./LogoLoader";
 import { Navigate } from "react-router-dom";
 import { useAuthSession } from "./AuthProvider";
 
@@ -15,8 +16,8 @@ export default function RequireAuth({ children }: { children: JSX.Element }) {
 
   if (status === "checking") {
     return (
-      <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
-        Verificando sesión...
+      <div className="erp-loading-screen h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
+        <LogoLoader text="Verificando sesión..." />
       </div>
     );
   }

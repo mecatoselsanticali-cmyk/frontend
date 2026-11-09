@@ -31,20 +31,20 @@ export default function LogoLoader({ size = "md", fullScreen = false, text, clas
   const s = SIZES[size];
 
   const content = (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+    <div role="status" aria-live="polite" aria-busy="true" className={`erp-logo-loader flex flex-col items-center justify-center gap-3 ${className}`}>
       <div className="relative flex items-center justify-center">
         {/* Resplandor difuminado detrás del anillo/logo */}
         <div className={`absolute ${s.ring} rounded-full bg-brand-500/20 blur-xl animate-pulse`} />
         {/* Anillo girando */}
         <div
-          className={`absolute ${s.ring} ${s.border} rounded-full border-neutral-200 border-t-brand-600 animate-spin`}
+          aria-hidden="true" className={`erp-loader-ring absolute ${s.ring} ${s.border} rounded-full border-neutral-200 border-t-brand-600 animate-spin`}
         />
         {/* Logo con pulso de escala */}
         <img
           src="/img/logo-santi-trimmed.webp"
           alt="Mecatos el Santi"
           draggable={false}
-          className={`relative z-10 ${s.logo} object-contain select-none animate-logo-pulse`}
+          className={`erp-loader-logo relative z-10 ${s.logo} object-contain select-none animate-logo-pulse`}
         />
       </div>
       {text && <p className={`${s.text} text-neutral-500 font-medium mt-2`}>{text}</p>}
@@ -58,7 +58,7 @@ export default function LogoLoader({ size = "md", fullScreen = false, text, clas
   // contenedor le mete un margen que lo desplaza hacia abajo, dejando un
   // borde de la pantalla sin cubrir.
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm !m-0">
+    <div className="erp-loading-screen fixed inset-0 z-50 flex items-center justify-center bg-white/70 backdrop-blur-sm !m-0">
       {content}
     </div>
   );

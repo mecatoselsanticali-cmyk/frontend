@@ -3,6 +3,7 @@ import { lazy, Suspense } from "react";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
 import Layout from "./layout/Layout";
+import { ErpThemeProvider } from "./hooks/useErpTheme";
 import RequireAuth from "./components/RequireAuth";
 import RequireRole from "./components/RequireRole";
 import { AuthProvider, useAuthSession } from "./components/AuthProvider";
@@ -48,7 +49,7 @@ function RootRedirect() {
 
   if (status === "checking") {
     return (
-      <div className="h-dvh w-screen flex items-center justify-center">
+      <div className="erp-loading-screen h-dvh w-screen flex items-center justify-center">
         <LogoLoader text="Cargando..." />
       </div>
     );
@@ -67,7 +68,7 @@ function RootRedirect() {
 // primera visita a esa ruta).
 function RouteLoadingFallback() {
   return (
-    <div className="h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
+    <div className="erp-loading-screen h-dvh w-screen flex items-center justify-center text-neutral-400 text-sm">
       <LogoLoader text="Cargando..." />
     </div>
   );
@@ -77,67 +78,69 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={<RouteLoadingFallback />}>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+        <ErpThemeProvider>
+          <Suspense fallback={<RouteLoadingFallback />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* Área Administrador */}
-            <Route
-              element={
-                <RequireAuth>
-                  <Layout />
-                </RequireAuth>
-              }
-            >
-              <Route path="/dashboard" element={<Dashboard />} />
+              {/* Área Administrador */}
               <Route
-                path="/sedes"
                 element={
-                  <RequireRole roles={["ADMIN"]}>
-                    <Sedes />
-                  </RequireRole>
+                  <RequireAuth>
+                    <Layout />
+                  </RequireAuth>
                 }
-              />
-              <Route path="/inventario" element={<Inventario />} />
-              <Route path="/compras" element={<Compras />} />
-              <Route path="/ventas" element={<Ventas />} />
-              <Route path="/cuentas-por-pagar" element={<CuentasPorPagar />} />
-              <Route path="/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
-              <Route path="/gastos" element={<Gastos />} />
+              >
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route
+                  path="/sedes"
+                  element={
+                    <RequireRole roles={["ADMIN"]}>
+                      <Sedes />
+                    </RequireRole>
+                  }
+                />
+                <Route path="/inventario" element={<Inventario />} />
+                <Route path="/compras" element={<Compras />} />
+                <Route path="/ventas" element={<Ventas />} />
+                <Route path="/cuentas-por-pagar" element={<CuentasPorPagar />} />
+                <Route path="/cuentas-por-cobrar" element={<CuentasPorCobrar />} />
+                <Route path="/gastos" element={<Gastos />} />
+                <Route
+                  path="/personal"
+                  element={
+                    <RequireRole roles={["ADMIN"]}>
+                      <Personal />
+                    </RequireRole>
+                  }
+                />
+                <Route path="/dian-config" element={<DianConfig />} />
+                <Route path="/finanzas" element={<Navigate to="/finanzas/caja" replace />} />
+                <Route path="/finanzas/caja" element={<FinanzasCaja />} />
+                <Route path="/finanzas/reportes" element={<FinanzasReportes />} />
+              </Route>
+
+              {/* Área Cajero */}
               <Route
-                path="/personal"
+                path="/cajero"
                 element={
-                  <RequireRole roles={["ADMIN"]}>
-                    <Personal />
-                  </RequireRole>
+                  <RequireCashierAuth>
+                    <CashierLayout />
+                  </RequireCashierAuth>
                 }
-              />
-              <Route path="/dian-config" element={<DianConfig />} />
-              <Route path="/finanzas" element={<Navigate to="/finanzas/caja" replace />} />
-              <Route path="/finanzas/caja" element={<FinanzasCaja />} />
-              <Route path="/finanzas/reportes" element={<FinanzasReportes />} />
-            </Route>
+              >
+                <Route index element={<Navigate to="caja" replace />} />
+                <Route path="caja" element={<Caja />} />
+                <Route path="facturas" element={<Facturas />} />
+                <Route path="compras" element={<ComprasCajero />} />
+              </Route>
 
-            {/* Área Cajero */}
-            <Route
-              path="/cajero"
-              element={
-                <RequireCashierAuth>
-                  <CashierLayout />
-                </RequireCashierAuth>
-              }
-            >
-              <Route index element={<Navigate to="caja" replace />} />
-              <Route path="caja" element={<Caja />} />
-              <Route path="facturas" element={<Facturas />} />
-              <Route path="compras" element={<ComprasCajero />} />
-            </Route>
-
-            <Route path="/" element={<RootRedirect />} />
-            <Route path="*" element={<RootRedirect />} />
-          </Routes>
-        </Suspense>
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="*" element={<RootRedirect />} />
+            </Routes>
+          </Suspense>
+        </ErpThemeProvider>
       </BrowserRouter>
     </AuthProvider>
   );

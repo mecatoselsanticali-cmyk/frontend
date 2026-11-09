@@ -38,7 +38,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
   return (
     <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="erp-data-table w-full text-sm">
           <thead className="bg-neutral-50 text-neutral-500 text-left">
             <tr>
               {columns.map((c) => (
@@ -71,7 +71,7 @@ export default function DataTable({ columns, rows, loading, emptyMessage }: Data
               </tr>
             )}
             {!loading && rows.map((row, i) => (
-              <tr key={row._id || i} className="border-t border-neutral-50">
+              <tr key={row._id || i} className="border-t border-neutral-50 transition-colors">
                 {columns.map((c) => (
                   <td
                     key={c.key}

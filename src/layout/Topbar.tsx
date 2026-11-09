@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Moon, Sun } from "lucide-react";
 
 // Mismo breakpoint que el `md:hidden` del botón de hamburguesa de abajo
 // (768px) — hook local, mismo criterio de "cada archivo mantiene su
@@ -27,6 +27,8 @@ function useIsMobile() {
 }
 
 interface TopbarProps {
+  dark: boolean;
+  onToggleTheme: () => void;
   hideBranchSelector?: boolean;
   title: string;
   branches: { _id: string; name: string }[];
@@ -39,6 +41,8 @@ interface TopbarProps {
 }
 
 export default function Topbar({
+  dark,
+  onToggleTheme,
   title,
   hideBranchSelector,
   branches,
@@ -62,34 +66,47 @@ export default function Topbar({
         </button>
         <h2 className="text-xl font-bold text-neutral-800 truncate">{title}</h2>
       </div>
-      {!hideBranchSelector && (lockedBranchName ? (
-        <span
-          data-tour="branch-selector"
-          className="border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-600 bg-neutral-50"
+      <div className="flex min-w-0 items-center gap-3">
+        {!hideBranchSelector && (lockedBranchName ? (
+          <span
+            data-tour="branch-selector"
+            className="border border-neutral-200 rounded-lg px-3 py-2 text-sm text-neutral-600 bg-neutral-50"
+          >
+            {lockedBranchName}
+          </span>
+        ) : (
+          <select
+            data-tour="branch-selector"
+            value={selectedBranch}
+            onChange={(e) => onBranchChange(e.target.value)}
+            className="max-w-auto border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
+          >
+            {/* "Todas las sedes" (el texto real de un <option> no se puede
+                acortar solo con CSS/clases responsive — un select nativo
+                siempre pinta el texto tal cual) empujaba el título de la
+                página fuera de la vista en celular, donde el header ya
+                comparte espacio con el botón de hamburguesa. Se acorta a
+                "Todas" por debajo de 768px. */}
+            <option value="">{isMobile ? "Todas" : "Todas las sedes"}</option>
+            {branches.map((b) => (
+              <option key={b._id} value={b._id}>
+                {isMobile ? lastWord(b.name) : b.name}
+              </option>
+            ))}
+          </select>
+        ))}
+        <button
+          type="button"
+          onClick={onToggleTheme}
+          aria-label={dark ? "Activar modo claro" : "Activar modo oscuro"}
+          aria-pressed={dark}
+          title={dark ? "Activar modo claro" : "Activar modo oscuro"}
+          className="erp-theme-toggle hidden md:inline-flex shrink-0 items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         >
-          {lockedBranchName}
-        </span>
-      ) : (
-        <select
-          data-tour="branch-selector"
-          value={selectedBranch}
-          onChange={(e) => onBranchChange(e.target.value)}
-          className="max-w-auto border border-neutral-200 rounded-lg px-3 py-2 text-base focus:outline-none focus:ring-1 focus:ring-brand-500"
-        >
-          {/* "Todas las sedes" (el texto real de un <option> no se puede
-              acortar solo con CSS/clases responsive — un select nativo
-              siempre pinta el texto tal cual) empujaba el título de la
-              página fuera de la vista en celular, donde el header ya
-              comparte espacio con el botón de hamburguesa. Se acorta a
-              "Todas" por debajo de 768px. */}
-          <option value="">{isMobile ? "Todas" : "Todas las sedes"}</option>
-          {branches.map((b) => (
-            <option key={b._id} value={b._id}>
-              {isMobile ? lastWord(b.name) : b.name}
-            </option>
-          ))}
-        </select>
-      ))}
+          {dark ? <Sun size={18} aria-hidden="true" /> : <Moon size={18} aria-hidden="true" />}
+          <span>{dark ? "Modo claro" : "Modo oscuro"}</span>
+        </button>
+      </div>
     </header>
   );
 }

@@ -103,9 +103,9 @@ function StatCard({ label, value, badge, trend }: {
   trend?: number;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:p-6">
+    <div className="erp-dashboard-card erp-stat-card rounded-xl border border-zinc-200/70 bg-white p-5 shadow-sm lg:p-6">
       <h3 className="mb-3 text-xs font-medium text-zinc-500">{label}</h3>
-      <p className="break-words text-xl font-bold tracking-tight text-zinc-900 lg:text-2xl">{value}</p>
+      <p className="erp-stat-value break-words text-xl font-bold tracking-tight text-zinc-900 lg:text-2xl">{value}</p>
       {(badge || trend !== undefined) && (
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {badge && <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badge.positive ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-700"}`}>{badge.label}</span>}
@@ -132,8 +132,9 @@ function SkeletonCard({ className = "" }: { className?: string }) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="h-40 flex items-center justify-center text-sm text-neutral-400 text-center px-4">
-      {message}
+    <div className="erp-empty-state h-40 flex items-center justify-center text-sm text-neutral-400 text-center px-4">
+      <span className="erp-empty-icon" aria-hidden="true"><Receipt size={23} strokeWidth={1.5} /></span>
+      <span>{message}</span>
     </div>
   );
 }
@@ -355,7 +356,7 @@ export default function Dashboard() {
   // celular (ver useIsMobile arriba) — así ningún gráfico de Recharts se
   // monta dos veces.
   const salesTimelineWidget = (
-    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
+    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">
         Comportamiento de ventas ({timelineGranularity === "hour" ? "por hora" : "por día"})
       </h3>
@@ -370,18 +371,18 @@ export default function Dashboard() {
                 <stop offset="95%" stopColor={BRAND} stopOpacity={0.01} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-chart-grid, #f1f1f0)" vertical={false} />
             <XAxis
               dataKey="label"
               className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
               axisLine={false}
               tickLine={false}
               ticks={hourTicks}
             />
             <YAxis
               className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
               axisLine={false}
               tickLine={false}
               // Recharts reserva 60px para el eje Y por default sin
@@ -412,7 +413,7 @@ export default function Dashboard() {
   );
 
   const topProductsWidget = (
-    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
+    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Top 5 productos</h3>
       {!hasTopProducts ? (
         <EmptyState message="No hay productos vendidos en el rango seleccionado" />
@@ -444,7 +445,7 @@ export default function Dashboard() {
                   const totalUnits = topProducts.reduce((sum: number, p: any) => sum + p.quantity, 0);
                   return (
                     <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle">
-                      <tspan x={cx} dy="-0.2em" fontSize={22} fontWeight={700} fill="#404040">
+                      <tspan x={cx} dy="-0.2em" fontSize={22} fontWeight={700} fill="var(--erp-chart-heading, #404040)">
                         {totalUnits.toLocaleString("es-CO")}
                       </tspan>
                       <tspan x={cx} dy="1.4em" fontSize={11} fill="#a3a3a3">
@@ -479,7 +480,7 @@ export default function Dashboard() {
   );
 
   const expensesWidget = (
-    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
+    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Gastos por categoría</h3>
       {!hasExpenses ? (
         <div className="flex min-h-56 flex-col items-center justify-center gap-3 text-center">
@@ -490,17 +491,17 @@ export default function Dashboard() {
       ) : (
         <ResponsiveContainer width="100%" height={220}>
           <BarChart data={expensesByCategory} margin={{ left: 8, right: 8, top: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f1f0" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-chart-grid, #f1f1f0)" vertical={false} />
             <XAxis
               dataKey="category"
               className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
               axisLine={false}
               tickLine={false}
             />
             <YAxis
               className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "#a3a3a3" }}
+              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
               axisLine={false}
               tickLine={false}
               // 40px (sin margin.left) recortaba el "$" de los ticks del
@@ -529,7 +530,7 @@ export default function Dashboard() {
   );
 
   const paymentMethodsWidget = (
-    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
+    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
       <h3 className="font-semibold text-neutral-700 mb-3">Transacciones por método de pago</h3>
       <div className="divide-y divide-neutral-50">
         {paymentMethods.map((m: any) => {
@@ -584,18 +585,18 @@ export default function Dashboard() {
   // comentario del backend en `getCriticalStockProducts`. Solo respeta
   // la sede elegida en la topbar.
   const criticalStockWidget = (
-    <div className="bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full flex flex-col">
+    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full flex flex-col">
       <div className="flex items-center justify-between mb-3 gap-2">
         <h3 className="font-semibold text-neutral-700">Stock Crítico</h3>
         {hasCriticalStock && (
-          <span className="shrink-0 text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded-full">
+          <span className="erp-status-chip shrink-0 text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded-full">
             {criticalStock.length} {criticalStock.length === 1 ? "producto en riesgo" : "productos en riesgo"}
           </span>
         )}
       </div>
 
       {!hasCriticalStock ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
+        <div className="erp-stock-healthy flex-1 flex flex-col items-center justify-center text-center py-6">
           <CircleCheck className="text-green-500 mb-2" size={32} />
           <p className="text-sm text-neutral-500">Todo el inventario está al día</p>
         </div>
@@ -620,7 +621,7 @@ export default function Dashboard() {
                   <p className="text-xs text-neutral-400">{p.sku}</p>
                 </div>
                 <span
-                  className={`shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full ${
+                  className={`erp-status-chip ${!isOut ? "erp-stock-low" : ""} shrink-0 text-xs font-medium px-2.5 py-0.5 rounded-full ${
                     isOut ? "bg-red-100 text-red-700" : "bg-orange-100 text-orange-600"
                   }`}
                 >

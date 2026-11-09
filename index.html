@@ -3,6 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Antes de CSS/React: solo el ERP hereda la preferencia guardada. -->
+    <script>
+      try {
+        if (!/^\/(?:login|reset-password|cajero)(?:\/|$)/.test(location.pathname) &&
+            localStorage.getItem("mecatos:erp-theme") === "dark") {
+          document.documentElement.dataset.erpTheme = "dark";
+        }
+      } catch (_) {}
+    </script>
+    <style>
+      @media screen {
+        html[data-erp-theme="dark"], html[data-erp-theme="dark"] body,
+        html[data-erp-theme="dark"] #root {
+          background: #09090b; color: #f4f4f5; color-scheme: dark;
+        }
+      }
+    </style>
     <link rel="icon" type="image/png" href="/img/logo-santi-trimmed.webp" />
     <title>Mecatos el Santi — Panel Administrativo</title>
   </head>

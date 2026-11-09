@@ -4,6 +4,7 @@ import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 import { adminApi } from "../services/api";
 import { useAuthSession } from "../components/AuthProvider";
+import { useErpTheme } from "../hooks/useErpTheme";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -40,6 +41,7 @@ export function useSelectedBranch() {
 }
 
 export default function Layout() {
+  const { dark, toggleTheme } = useErpTheme();
   const location = useLocation();
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranch, setSelectedBranch] = useSelectedBranch();
@@ -110,6 +112,8 @@ export default function Layout() {
       />
       <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
         <Topbar
+          dark={dark}
+          onToggleTheme={toggleTheme}
           title={TITLES[location.pathname] || "Mecatos el Santi"}
           branches={branches}
           selectedBranch={selectedBranch}
