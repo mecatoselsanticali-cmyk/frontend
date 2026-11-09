@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Printer, Eye, X } from "lucide-react";
+import { Printer, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { printThermalReceipt, previewThermalReceipt, type PrintReceiptPayload } from "../services/printerService";
+import { printThermalReceipt, type PrintReceiptPayload } from "../services/printerService";
 import { formatDateTime } from "../utils/timezone";
 
 interface SaleReceiptProps {
@@ -58,7 +58,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
   const branch = sale.branchId;
   const cashierName = sale.cashierId?.name;
   const [printing, setPrinting] = useState(false);
-  const [previewing, setPreviewing] = useState(false);
 
   // Ventas previas al provider lock quedan como LEGACY y usan una atribución
   // genérica. MOCK nunca debe mostrar un CUFE/QR ficticio como factura DIAN.
@@ -118,21 +117,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
     }
   };
 
-  // A diferencia de handlePrint, esto NO tiene fallback silencioso — si el
-  // print-server local no está corriendo, avisa con un alert en vez de
-  // fallar en silencio, porque el único propósito de este botón es
-  // justamente ver el formato del ticket térmico sin tener la impresora
-  // física conectada (ver docs/THERMAL_PRINTER_INTEGRATION.md).
-  const handlePreview = async () => {
-    setPreviewing(true);
-    try {
-      await previewThermalReceipt(buildReceiptPayload());
-    } catch (error: any) {
-      alert(error?.message || "No se pudo generar la vista previa");
-    } finally {
-      setPreviewing(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 !m-0">
@@ -274,15 +258,6 @@ export default function SaleReceipt({ sale, onClose }: SaleReceiptProps) {
             className="flex-1 bg-neutral-100 rounded-lg py-2 text-sm font-medium"
           >
             Cerrar
-          </button>
-          <button
-            onClick={handlePreview}
-            disabled={previewing}
-            title="Ver cómo quedaría el ticket térmico sin necesidad de tener la impresora conectada"
-            className="flex-1 flex items-center justify-center gap-2 bg-neutral-100 hover:bg-neutral-200 rounded-lg py-2 text-sm font-medium disabled:opacity-50"
-          >
-            <Eye size={16} />
-            {previewing ? "Generando..." : "Vista previa"}
           </button>
           <button
             onClick={handlePrint}
