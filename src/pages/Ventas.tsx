@@ -47,7 +47,7 @@ function CopySaleId({ value }: { value: string }) {
     try { await navigator.clipboard.writeText(value); setCopied(true); }
     catch { Swal.fire({ title: "No se pudo copiar", text: value, icon: "info" }); }
   };
-  return <button type="button" onClick={copy} title={value} aria-label={`Copiar CUFE o ID: ${value}`} className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs text-zinc-600 transition hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><span>{value.length > 10 ? `${value.slice(0, 10)}…` : value}</span>{copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}<span className="sr-only" role="status">{copied ? "Copiado" : ""}</span></button>;
+  return <button type="button" onClick={copy} title={value} aria-label={`Copiar identificador: ${value}`} className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs text-zinc-600 transition hover:bg-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><span>{value.length > 10 ? `${value.slice(0, 10)}…` : value}</span>{copied ? <Check size={12} aria-hidden="true" /> : <Copy size={12} aria-hidden="true" />}<span className="sr-only" role="status">{copied ? "Copiado" : ""}</span></button>;
 }
 
 function downloadTicket(sale: any) {
@@ -593,7 +593,7 @@ export default function Ventas() {
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-neutral-500 text-left">
               <tr>
-                <th className="p-3 whitespace-nowrap">CUFE / ID</th>
+                <th className="p-3 whitespace-nowrap">Factura / ID</th>
                 <th className="p-3 whitespace-nowrap">Fecha</th>
                 {/* Total y Estado DIAN se adelantaron en el orden (van
                     justo después de las dos columnas que siempre quedan
@@ -643,7 +643,7 @@ export default function Ventas() {
                   s.orderType === "RAPPI";
                 return (
                   <tr key={s._id} className={`border-t border-zinc-100 transition-colors hover:bg-zinc-50/80 ${cancelled ? "opacity-60" : ""}`}>
-                    <td className="p-3"><CopySaleId value={String(s.cufe || s._id)} /></td>
+                    <td className="p-3">{s.category === "SPECIAL" ? (s.dianInvoiceNumber ? <CopySaleId value={String(s.dianInvoiceNumber)} /> : <span className="text-xs text-zinc-400">Sin número asignado</span>) : <CopySaleId value={String(s.cufe || s._id)} />}</td>
                     <td className="p-3 whitespace-nowrap"><p className="font-medium text-zinc-700">{formatDate(s.createdAt, { day: "2-digit", month: "short", year: "numeric" })}</p><p className="mt-1 text-xs text-zinc-400">{formatTime(s.createdAt, { hour: "2-digit", minute: "2-digit", hour12: true })}</p></td>
                     <td className="p-3 text-right font-semibold tabular-nums text-zinc-900">{money(s.total)}</td>
                     <td className="p-3">

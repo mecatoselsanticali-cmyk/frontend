@@ -54,7 +54,7 @@ export default function Topbar({
   const isMobile = useIsMobile();
 
   return (
-    <header className="h-16 border-b border-neutral-200 bg-white flex items-center justify-between px-4 md:px-6 gap-3">
+    <header className="h-16 shrink-0 border-b border-neutral-200 bg-white flex items-center justify-between px-4 md:px-6 gap-3">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onMenuClick}

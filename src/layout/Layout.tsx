@@ -41,6 +41,11 @@ export function useSelectedBranch() {
 }
 
 export default function Layout() {
+  useEffect(() => {
+    // El ERP desplaza su contenido en main, sin un segundo scroll del documento.
+    document.documentElement.classList.add("erp-layout-active");
+    return () => document.documentElement.classList.remove("erp-layout-active");
+  }, []);
   const { dark, toggleTheme } = useErpTheme();
   const location = useLocation();
   const [branches, setBranches] = useState<any[]>([]);
@@ -103,14 +108,14 @@ export default function Layout() {
     : undefined;
 
   return (
-    <div className="flex h-dvh w-screen overflow-hidden bg-neutral-50">
+    <div className="flex h-dvh w-full overflow-hidden bg-neutral-50">
       <Sidebar
         name={admin?.name}
         role={admin?.role}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
       />
-      <div className="min-w-0 flex-1 flex flex-col overflow-hidden">
+      <div className="min-h-0 min-w-0 flex-1 flex flex-col overflow-hidden">
         <Topbar
           dark={dark}
           onToggleTheme={toggleTheme}
@@ -122,7 +127,7 @@ export default function Layout() {
           hideBranchSelector={location.pathname === "/dashboard"}
           onMenuClick={() => setSidebarOpen(true)}
         />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="min-h-0 flex-1 overflow-y-auto overscroll-none p-6">
           <Outlet context={{ branches, lockedBranchName, isManager }} />
         </main>
       </div>

@@ -4,6 +4,15 @@
 
 html, body, #root { height: 100%; margin: 0; }
 
+@media screen {
+  html.erp-layout-active,
+  html.erp-layout-active body,
+  html.erp-layout-active #root {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 /* La flecha nativa de un <select> queda pegada al borde derecho y no se puede
    mover. Se reemplaza por un chevron propio con 12px de margen; `padding-right`
    evita que el texto se solape con la flecha. `:not([multiple])` sube la
