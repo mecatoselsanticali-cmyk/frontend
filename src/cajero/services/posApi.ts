@@ -28,8 +28,10 @@ export const posApi = {
   // emisión DIAN en línea antes de responder (ver punto 37 de
   // backend/CLAUDE.md), y el peor caso real de Siigo (auth + POST + hasta 5
   // sondeos de 2s por el CUFE) puede acercarse o superar los 8s.
-  createSale: (payload: any) =>
-    posHttp.post("/sales", payload, { timeout: CREATE_SALE_TIMEOUT_MS }).then((r) => r.data),
+  createSale: (payload: any) => {
+    console.log("[POS → backend] POST /sales payload:", JSON.stringify(payload, null, 2));
+    return posHttp.post("/sales", payload, { timeout: CREATE_SALE_TIMEOUT_MS }).then((r) => r.data);
+  },
 
   syncBatch: (sales: any[]) =>
     posHttp.post("/sales/sync-batch", { sales }).then((r) => r.data),

@@ -130,7 +130,10 @@ export const adminApi = {
     // emisión DIAN en línea antes de responder (ver punto 37 de
     // backend/CLAUDE.md), y el peor caso real de Siigo puede acercarse o
     // superar los 8s.
-    adminHttp.post("/sales", data, { timeout: 20000 }).then((r) => r.data),
+    (() => {
+      console.log("[ERP → backend] POST /sales payload:", JSON.stringify(data, null, 2));
+      return adminHttp.post("/sales", data, { timeout: 20000 }).then((r) => r.data);
+    })(),
   updateSale: (
     id: string,
     data: {
