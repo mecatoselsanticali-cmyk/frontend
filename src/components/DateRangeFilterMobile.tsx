@@ -115,13 +115,36 @@ function DateRangeSheet({ value, onApply, onClose }: {
 
 
 interface DateRangeFilterMobileProps extends DateRange {
+  compact?: boolean;
   onChange: (range: DateRange) => void;
 }
 
-export default function DateRangeFilterMobile({ from, to, onChange }: DateRangeFilterMobileProps) {
+export default function DateRangeFilterMobile({ from, to, compact = false, onChange }: DateRangeFilterMobileProps) {
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const fullLabel = rangeLabel({ from, to });
+  const shortDate = (date: string) => dateLabel(date, {
+    day: "numeric",
+    month: "short",
+    ...(from.slice(0, 4) !== to.slice(0, 4) ? { year: "2-digit" } : {}),
+  }).replace(/\./g, "").replace(/ de /g, " ");
+  const label = compact && from && to
+    ? from === to ? shortDate(from) : `${shortDate(from)} – ${shortDate(to)}`
+    : fullLabel;
+
   return <>
-      <button type="button" onClick={() => setCalendarOpen(true)} aria-haspopup="dialog" aria-expanded={calendarOpen} className="flex w-full items-center justify-between gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm text-zinc-700 active:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/20"><Calendar size={17} className="shrink-0 text-zinc-400" aria-hidden="true" /><span className="flex-1 text-left">{rangeLabel({ from, to })}</span><ChevronDown size={16} className="shrink-0 text-zinc-400" aria-hidden="true" /></button>
+    <button
+      type="button"
+      onClick={() => setCalendarOpen(true)}
+      aria-haspopup="dialog"
+      aria-expanded={calendarOpen}
+      aria-label={compact ? `Rango de fecha: ${fullLabel}` : undefined}
+      title={compact ? fullLabel : undefined}
+      className={`flex w-full items-center gap-2 rounded-xl border bg-white active:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/20 ${compact ? "h-10 min-w-0 border-slate-200/90 px-3 text-xs font-semibold text-slate-800 shadow-sm" : "justify-between border-zinc-200 px-3.5 py-2.5 text-sm text-zinc-700"}`}
+    >
+      <Calendar size={compact ? 14 : 17} className={compact ? "shrink-0 text-orange-600" : "shrink-0 text-zinc-400"} aria-hidden="true" />
+      <span className={`flex-1 text-left ${compact ? "truncate" : ""}`}>{label}</span>
+      <ChevronDown size={compact ? 14 : 16} className="shrink-0 text-zinc-400" aria-hidden="true" />
+    </button>
     {calendarOpen && <DateRangeSheet value={{ from, to }} onApply={onChange} onClose={() => setCalendarOpen(false)} />}
   </>;
 }

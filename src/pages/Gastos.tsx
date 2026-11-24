@@ -199,28 +199,24 @@ export default function Gastos() {
     setSearch("");
   };
 
-  return (
-    <div className="space-y-4">
-      <KpiCarousel label="Métricas de gastos">
-        <ExpenseKpi label="Total Gastado" value={error ? "—" : money(totalAmount)} detail={`${total} ${total === 1 ? "egreso" : "egresos"}`} icon={Wallet} loading={loading} />
-        <ExpenseKpi label="Mayor Categoría de Gasto" value={error ? "—" : largestCategory ? categoryLabels[largestCategory[0]] || largestCategory[0] : "Sin gastos"} detail={largestCategory && totalAmount ? `${(largestCategory[1] / totalAmount * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 })}% del total gastado` : "Sin participación en el periodo"} icon={ChartPie} loading={loading} />
-        <ExpenseKpi label="Promedio por Gasto" value={error ? "—" : money(total ? totalAmount / total : 0)} detail="Según los filtros seleccionados" icon={Receipt} loading={loading} />
-      </KpiCarousel>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-          <label className="flex min-w-0 items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2.5 text-zinc-400"><Tag size={17} className="shrink-0" aria-hidden="true" /><select aria-label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)} className="min-w-0 w-full bg-white text-sm text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><option value="">Todas las categorías</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          {isMobile ? (
-            <DateRangeFilterMobile from={from} to={to} onChange={(range) => { setFrom(range.from); setTo(range.to); }} />
-          ) : (
-          <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2"><legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" /><input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /><span className="text-xs text-zinc-400">a</span><input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></fieldset>
-          )}
-          <div className="relative min-w-0 flex-1"><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" /><input aria-label="Buscar por concepto" placeholder="Buscar por concepto…" value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-xl border border-zinc-200 py-2.5 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
-          {(category || from || to || search) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50">Limpiar filtros</button>}
-        </div>
-        <button type="button" onClick={openModal} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 md:w-auto"><Plus size={17} aria-hidden="true" />Nuevo gasto</button>
-      </div>
-      {error && <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}<button type="button" onClick={load} className="font-medium underline">Reintentar</button></div>}
-      <DataTable
+  const renderExpenseActions = (r: any) => (
+    <ActionsMenu
+      items={[
+        { label: "Ver comprobante", onClick: () => setViewingExpense(r) },
+        { label: "Editar", onClick: () => setEditingExpense(r) },
+        { label: "Eliminar", danger: true, onClick: () => handleDelete(r) },
+      ]}
+    />
+  );
+
+  const topCategoryName = largestCategory ? categoryLabels[largestCategory[0]] || largestCategory[0] : "Sin gastos";
+  const topCategoryShareLabel = largestCategory && totalAmount ? `${(largestCategory[1] / totalAmount * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 })}% del total gastado` : "Sin participación en el periodo";
+  const averageExpense = total ? totalAmount / total : 0;
+  const expensesCountLabel = `${total} ${total === 1 ? "egreso" : "egresos"}`;
+  const kpiValue = (value: string) => loading ? "…" : error ? "—" : value;
+
+  const table = (
+    <DataTable
         loading={loading}
         rows={rows}
         emptyMessage="No hay gastos registrados"
@@ -258,19 +254,91 @@ export default function Gastos() {
             stickyRight: true,
             centerHeader: true,
             render: (r) => (
-              <div className="flex justify-center">
-                <ActionsMenu
-                  items={[
-                    { label: "Ver comprobante", onClick: () => setViewingExpense(r) },
-                    { label: "Editar", onClick: () => setEditingExpense(r) },
-                    { label: "Eliminar", danger: true, onClick: () => handleDelete(r) },
-                  ]}
-                />
-              </div>
+              <div className="flex justify-center">{renderExpenseActions(r)}</div>
             ),
           },
         ]}
-      />
+    />
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* Móvil (< md): bento grid sin carrusel — Total Gastado a ancho completo + Mayor Categoría y Promedio. */}
+      <div className="md:hidden grid grid-cols-2 gap-2.5" aria-busy={loading}>
+        <div className="col-span-2 flex items-center justify-between gap-3 rounded-2xl border border-orange-500/25 bg-gradient-to-r from-orange-50/75 via-white to-white p-3.5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-600">Total Gastado</p>
+            <p className="mt-0.5 text-xl font-extrabold leading-none tracking-tight tabular-nums text-slate-900 sm:text-2xl">{kpiValue(money(totalAmount))}</p>
+            <p className="mt-1.5 truncate text-[11px] font-medium text-slate-500">{loading ? "Cargando…" : expensesCountLabel}</p>
+          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-600"><Wallet className="h-5 w-5" aria-hidden="true" /></span>
+        </div>
+        <div className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Mayor Categoría</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600"><ChartPie className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="truncate text-base font-extrabold leading-tight tracking-tight text-slate-900 sm:text-lg">{kpiValue(topCategoryName)}</div>
+          <p className="line-clamp-2 text-[10px] leading-snug text-slate-500">{loading ? "Cargando…" : topCategoryShareLabel}</p>
+        </div>
+        <div className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Promedio / Gasto</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><Receipt className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="truncate text-base font-extrabold leading-tight tracking-tight tabular-nums text-slate-900 sm:text-lg">{kpiValue(money(averageExpense))}</div>
+          <p className="truncate text-[10px] text-slate-500">Según los filtros</p>
+        </div>
+      </div>
+      <div className="hidden md:block">
+      <KpiCarousel label="Métricas de gastos">
+        <ExpenseKpi label="Total Gastado" value={error ? "—" : money(totalAmount)} detail={`${total} ${total === 1 ? "egreso" : "egresos"}`} icon={Wallet} loading={loading} />
+        <ExpenseKpi label="Mayor Categoría de Gasto" value={error ? "—" : largestCategory ? categoryLabels[largestCategory[0]] || largestCategory[0] : "Sin gastos"} detail={largestCategory && totalAmount ? `${(largestCategory[1] / totalAmount * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 })}% del total gastado` : "Sin participación en el periodo"} icon={ChartPie} loading={loading} />
+        <ExpenseKpi label="Promedio por Gasto" value={error ? "—" : money(total ? totalAmount / total : 0)} detail="Según los filtros seleccionados" icon={Receipt} loading={loading} />
+      </KpiCarousel>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4">
+        <div className="flex min-w-0 flex-1 flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+          <label className="flex min-w-0 items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2.5 text-zinc-400"><Tag size={17} className="shrink-0" aria-hidden="true" /><select aria-label="Categoría" value={category} onChange={(event) => setCategory(event.target.value)} className="min-w-0 w-full bg-white text-sm text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-500"><option value="">Todas las categorías</option>{Object.entries(categoryLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          {isMobile ? (
+            <DateRangeFilterMobile from={from} to={to} onChange={(range) => { setFrom(range.from); setTo(range.to); }} />
+          ) : (
+          <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2"><legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" /><input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /><span className="text-xs text-zinc-400">a</span><input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></fieldset>
+          )}
+          <div className="relative min-w-0 flex-1"><Search size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" aria-hidden="true" /><input aria-label="Buscar por concepto" placeholder="Buscar por concepto…" value={search} onChange={(event) => setSearch(event.target.value)} className="w-full rounded-xl border border-zinc-200 py-2.5 pl-10 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20" /></div>
+          {(category || from || to || search) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50">Limpiar filtros</button>}
+        </div>
+        <button type="button" onClick={openModal} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 md:w-auto"><Plus size={17} aria-hidden="true" />Nuevo gasto</button>
+      </div>
+      {error && <div role="alert" className="flex items-center justify-between gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}<button type="button" onClick={load} className="font-medium underline">Reintentar</button></div>}
+      {loading || rows.length === 0 ? table : (
+        <>
+          {/* Móvil (< md): filas compactas al 100% del ancho, sin scroll horizontal. */}
+          <div className="md:hidden overflow-hidden rounded-2xl border border-slate-200/85 bg-white divide-y divide-slate-200/85">
+            {rows.map((r) => (
+              <div key={r._id} className="space-y-2.5 p-3.5">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-500/10 text-rose-600"><Receipt className="h-4 w-4" aria-hidden="true" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold leading-snug text-slate-900">{titleCase(r.concept || "Sin concepto")}</p>
+                      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                        {categoryLabels[r.category] || r.category} · {formatDate(r.createdAt, { day: "2-digit", month: "short", year: "numeric" })} · {formatTime(r.createdAt, { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">{renderExpenseActions(r)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/95 px-3 py-2 text-xs">
+                  <div className="shrink-0"><span className="font-medium text-slate-400">Monto: </span><span className="font-extrabold tabular-nums text-rose-600">{money(r.amount)}</span></div>
+                  {r.branchId?.name && <span className="min-w-0 truncate rounded-full border border-slate-200/80 bg-white px-2.5 py-0.5 text-[11px] font-semibold text-slate-700">{r.branchId.name.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "") || r.branchId.name}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">{table}</div>
+        </>
+      )}
 
       {!loading && total > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-neutral-500">

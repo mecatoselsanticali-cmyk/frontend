@@ -35,6 +35,12 @@ function RoleBadge({ role }: { role: string }) {
   return <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-medium ${roleColors[role] || roleColors.CASHIER}`}>{roleLabels[role] || role}</span>;
 }
 
+const getUserInitials = (name: string) => name.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase();
+
+function StatusBadge({ active }: { active: boolean }) {
+  return <span className={`whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs ${active ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-zinc-100 text-zinc-500 border-zinc-200/60"}`}>{active ? "Activo" : "Inactivo"}</span>;
+}
+
 function UserIdentity({ user }: { user: TeamUser }) {
   const initials = user.name.trim().split(/\s+/).slice(0, 2).map((part) => part.charAt(0)).join("").toUpperCase();
   return <div className="flex items-center gap-3"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 text-xs font-semibold text-zinc-700">{initials || "U"}</span><span className="font-medium text-zinc-900">{user.name}</span></div>;
@@ -198,13 +204,77 @@ export default function Personal() {
     setShowInactive(false);
   };
 
+  const totalUsersLabel = summaryLoading ? "…" : summaryError ? "—" : `${team.length} colaboradores`;
+
+  const userBranchLabel = (r: any) =>
+    r.branchName && r.branchName !== "—"
+      ? r.branchName.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "") || r.branchName
+      : r.role === "ADMIN" ? "Acceso Global / Nivel Central" : "Sin sede asignada";
+
+  const renderUserActions = (r: any) => {
+    const isSelf = currentUserId !== null && String(r._id) === currentUserId;
+    return (
+      <ActionsMenu items={[
+        { label: "Editar permisos", disabled: busyId === r._id, onClick: () => openEdit(r) },
+        { label: r.role === "CASHIER" ? "Cambiar PIN" : "Cambiar clave", disabled: busyId === r._id, onClick: () => openEdit(r, true) },
+        ...(!isSelf ? [r.active
+          ? { label: "Desactivar usuario", danger: true, disabled: busyId === r._id, onClick: () => handleDelete(r) }
+          : { label: "Reactivar usuario", disabled: busyId === r._id, onClick: () => handleReactivate(r) }] : []),
+      ]} />
+    );
+  };
+
+  const table = (
+    <DataTable
+        loading={loading}
+        rows={users}
+        emptyMessage="No hay usuarios registrados para esta sede"
+        columns={[
+          { key: "name", label: "Nombre", render: (r) => <UserIdentity user={r} /> },
+          { key: "role", label: "Rol", render: (r) => <RoleBadge role={r.role} /> },
+          { key: "email", label: "Correo", hideOnMobile: true, render: (r) => r.email ? <span className="flex items-center gap-2 text-zinc-500"><Mail size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />{r.email}</span> : <span className="text-xs text-zinc-400">Sin correo registrado</span> },
+          { key: "active", label: "Estado", render: (r) => <StatusBadge active={r.active} /> },
+          { key: "branchName", label: "Sede", render: (r) => <span title={r.branchName || undefined} className="inline-flex whitespace-nowrap rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">{userBranchLabel(r)}</span> },
+          { key: "Acciones", label: "Acciones", stickyRight: true, centerHeader: true, render: (r) => <div className="flex justify-center">{renderUserActions(r)}</div> },
+        ]}
+    />
+  );
+
   return (
     <div className="space-y-4">
+      {/* Móvil (< md): bento grid sin carrusel — Total a ancho completo + Desglose por Rol y Activos/Inactivos. */}
+      <div className="md:hidden grid grid-cols-2 gap-2.5" aria-busy={summaryLoading}>
+        <div className="col-span-2 flex items-center justify-between gap-3 rounded-2xl border border-orange-500/25 bg-gradient-to-r from-orange-50/75 via-white to-white p-3.5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-600">Total Usuarios Registrados</p>
+            <p className="mt-1 text-xl font-extrabold leading-none tracking-tight tabular-nums text-slate-900 sm:text-2xl">{totalUsersLabel}</p>
+          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-600"><Users className="h-5 w-5" aria-hidden="true" /></span>
+        </div>
+        <div className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Desglose por Rol</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600"><ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="text-base font-extrabold leading-tight tracking-tight text-slate-900 sm:text-lg">{summaryLoading ? "…" : summaryError ? "—" : `${Object.keys(roleCounts).length} roles`}</div>
+          {!summaryLoading && !summaryError && <p className="line-clamp-2 text-[10px] leading-snug text-slate-500">{Object.entries(roleLabels).map(([value, label]) => `${roleCounts[value] || 0} ${label}`).join(" · ")}</p>}
+        </div>
+        <div className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Activos vs Inactivos</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><UserCheck className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="text-base font-extrabold leading-tight tracking-tight text-slate-900 sm:text-lg">{summaryLoading ? "…" : summaryError ? "—" : `${activeCount} activos`}</div>
+          {!summaryLoading && !summaryError && <p className="text-[10px] text-slate-500">{team.length - activeCount} inactivos</p>}
+        </div>
+      </div>
+      <div className="hidden md:block">
       <KpiCarousel label="Métricas de personal">
         <TeamKpi label="Total Usuarios Registrados" value={summaryError ? "—" : `${team.length} colaboradores`} icon={Users} loading={summaryLoading} />
         <TeamKpi label="Desglose por Rol" value={summaryError ? "—" : `${Object.keys(roleCounts).length} roles`} icon={ShieldCheck} loading={summaryLoading}>{!summaryError && Object.entries(roleLabels).map(([value, label]) => <span key={value} className="rounded-lg bg-zinc-50 px-2 py-1">{roleCounts[value] || 0} · {label}</span>)}</TeamKpi>
         <TeamKpi label="Usuarios Activos vs Inactivos" value={summaryError ? "—" : `${activeCount} activos`} icon={UserCheck} loading={summaryLoading}>{!summaryError && <span>{team.length - activeCount} inactivos</span>}</TeamKpi>
       </KpiCarousel>
+      </div>
       <p className="text-xs text-zinc-400">Resumen de todos los usuarios de {selectedBranch ? "la sede seleccionada" : "la organización"}, incluidos los inactivos.</p>
       {summaryError && <p role="alert" className="text-xs text-red-600">No se pudo cargar el resumen. <button type="button" onClick={() => setRevision((value) => value + 1)} className="underline">Reintentar</button></p>}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200/80 bg-white p-4">
@@ -216,44 +286,35 @@ export default function Personal() {
         </div>
         <button type="button" onClick={openCreate} className="flex w-full items-center justify-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 md:w-auto"><Plus size={17} aria-hidden="true" />Nuevo usuario</button>
       </div>
-      <DataTable
-        loading={loading}
-        rows={users}
-        emptyMessage="No hay usuarios registrados para esta sede"
-        columns={[
-          { key: "name", label: "Nombre", render: (r) => <UserIdentity user={r} /> },
-          { key: "role", label: "Rol", render: (r) => <RoleBadge role={r.role} /> },
-          { key: "email", label: "Correo", hideOnMobile: true, render: (r) => r.email ? <span className="flex items-center gap-2 text-zinc-500"><Mail size={14} className="shrink-0 text-zinc-400" aria-hidden="true" />{r.email}</span> : <span className="text-xs text-zinc-400">Sin correo registrado</span> },
-          {
-            key: "active",
-            label: "Estado",
-            render: (r) => (
-              <span
-                className={`text-xs px-2.5 py-0.5 rounded-full border ${
-                  r.active ? "bg-emerald-50 text-emerald-700 border-emerald-200/60" : "bg-zinc-100 text-zinc-500 border-zinc-200/60"
-                }`}
-              >
-                {r.active ? "Activo" : "Inactivo"}
-              </span>
-            ),
-          },
-          { key: "branchName", label: "Sede", render: (r) => <span title={r.branchName || undefined} className="inline-flex whitespace-nowrap rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-600">{r.branchName && r.branchName !== "—" ? r.branchName.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "") || r.branchName : r.role === "ADMIN" ? "Acceso Global / Nivel Central" : "Sin sede asignada"}</span> },
-          { key: "Acciones", label: "Acciones", stickyRight: true, centerHeader: true, render: (r) => {
-            const isSelf = currentUserId !== null && String(r._id) === currentUserId;
-            return (
-            <div className="flex justify-center">
-              <ActionsMenu items={[
-                { label: "Editar permisos", disabled: busyId === r._id, onClick: () => openEdit(r) },
-                { label: r.role === "CASHIER" ? "Cambiar PIN" : "Cambiar clave", disabled: busyId === r._id, onClick: () => openEdit(r, true) },
-                ...(!isSelf ? [r.active
-                  ? { label: "Desactivar usuario", danger: true, disabled: busyId === r._id, onClick: () => handleDelete(r) }
-                  : { label: "Reactivar usuario", disabled: busyId === r._id, onClick: () => handleReactivate(r) }] : []),
-              ]} />
-            </div>
-            );
-          }},
-        ]}
-      />
+      {loading || users.length === 0 ? table : (
+        <>
+          {/* Móvil (< md): filas compactas al 100% del ancho, sin scroll horizontal. */}
+          <div className="md:hidden overflow-hidden rounded-2xl border border-slate-200/85 bg-white divide-y divide-slate-200/85">
+            {users.map((u) => (
+              <div key={u._id} className="space-y-2.5 p-3.5">
+                <div className="flex items-center justify-between gap-2.5">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <div aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200/80 bg-slate-100 text-xs font-extrabold text-slate-700">{getUserInitials(u.name) || "U"}</div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold leading-snug text-slate-900">{u.name}</p>
+                      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">{u.email || "Sin correo registrado"}</p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">{renderUserActions(u)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/95 px-3 py-2 text-xs">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0"><RoleBadge role={u.role} /></span>
+                    <span className="truncate text-[11px] font-medium text-slate-500">· {userBranchLabel(u)}</span>
+                  </div>
+                  <span className="shrink-0"><StatusBadge active={u.active} /></span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">{table}</div>
+        </>
+      )}
 
       {!loading && total > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-neutral-500">

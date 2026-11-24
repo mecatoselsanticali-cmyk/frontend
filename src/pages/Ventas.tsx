@@ -356,13 +356,66 @@ export default function Ventas() {
     setCategory("");
   };
 
+  const isDeliverySale = (s: any) =>
+    s.paymentMethod === "DELIVERY_APP" || s.paymentMethod === "BANCOLOMBIA" || s.orderType === "DIDI" || s.orderType === "RAPPI";
+
+  const renderSaleActions = (s: any) => {
+    const cancelled = s.status === "CANCELLED";
+    return (
+      <ActionsMenu
+        items={[
+          { label: "Ver detalle", onClick: () => setViewingSale(s) },
+          { label: "Descargar ticket", onClick: () => downloadTicket(s) },
+          { label: "Reemitir DIAN", disabled: true, title: "La API no dispone de una operación de reemisión manual", onClick: () => {} },
+          ...(!cancelled && isDeliverySale(s) && s.paymentStatus === "PENDING_PAYMENT"
+            ? [{ label: "Confirmar Pago", onClick: () => handleConfirmPayment(s) }]
+            : []),
+          ...(!cancelled ? [{ label: "Anular", danger: true, onClick: () => handleCancel(s) }] : []),
+        ]}
+      />
+    );
+  };
+
+  const dianRateLabel = summary ? `${summary.count ? (summary.approved / summary.count * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 }) : 0}% aprobadas` : "—";
+  const dianBreakdownLabel = summary ? `${summary.approved} aprob. · ${summary.notEmitted} sin emitir · ${summary.other} pend.` : "No se pudo cargar el desglose";
+  const salesCountLabel = `${total} ${total === 1 ? "venta" : "ventas"} · ${date || "Todo el historial"}`;
+
   return (
     <div className="space-y-4">
+      {/* Móvil (< md): bento grid sin carrusel — Total Vendido a ancho completo + Estado DIAN y Canal Principal. */}
+      <div className="md:hidden grid grid-cols-2 gap-2.5">
+        <div aria-busy={loading} className="col-span-2 flex items-center justify-between gap-3 rounded-2xl border border-orange-500/25 bg-gradient-to-r from-orange-50/75 via-white to-white p-3.5 shadow-sm">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-600">Total Vendido</p>
+            <p className="mt-0.5 text-xl font-extrabold leading-none tracking-tight tabular-nums text-slate-900 sm:text-2xl">{loading ? "…" : money(totalAmount)}</p>
+            <p className="mt-1.5 truncate text-[11px] font-medium text-slate-500">{loading ? "Calculando…" : salesCountLabel}</p>
+          </div>
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/15 text-orange-600"><ShoppingBag className="h-5 w-5" aria-hidden="true" /></span>
+        </div>
+        <div aria-busy={summaryLoading} className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Estado DIAN</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="text-base font-extrabold leading-tight tracking-tight text-slate-900 sm:text-lg">{summaryLoading ? "…" : dianRateLabel}</div>
+          <p className="line-clamp-2 text-[10px] leading-snug text-slate-500">{summaryLoading ? "Calculando…" : dianBreakdownLabel}</p>
+        </div>
+        <div aria-busy={summaryLoading} className="flex flex-col justify-between gap-1.5 rounded-2xl border border-slate-200/85 bg-white p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="truncate text-xs font-semibold text-slate-500">Canal Principal</span>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600"><Wallet className="h-3.5 w-3.5" aria-hidden="true" /></span>
+          </div>
+          <div className="truncate text-base font-extrabold leading-tight tracking-tight text-slate-900 sm:text-lg">{summaryLoading ? "…" : summary?.primary || "—"}</div>
+          <p className="line-clamp-2 text-[10px] leading-snug text-slate-500">{summaryLoading ? "Calculando…" : summary ? `${summary.primaryCount} de ${summary.count} ventas · Método predominante` : "No se pudo cargar el desglose"}</p>
+        </div>
+      </div>
+      <div className="hidden md:block">
       <KpiCarousel label="Métricas de ventas">
         <SalesKpi label="Total Vendido" value={money(totalAmount)} detail={`${total} ${total === 1 ? "venta" : "ventas"} · ${date || "Todo el historial"}`} icon={ShoppingBag} loading={loading} />
         <SalesKpi label="Estado DIAN" value={summary ? `${summary.count ? (summary.approved / summary.count * 100).toLocaleString("es-CO", { maximumFractionDigits: 1 }) : 0}% aprobadas` : "—"} detail={summary ? `${summary.approved} aprobadas · ${summary.notEmitted} no emitidas · ${summary.other} pendientes, enviadas o rechazadas` : "No se pudo cargar el desglose"} icon={BadgeCheck} loading={summaryLoading} />
         <SalesKpi label="Canal Principal" value={summary?.primary || "—"} detail={summary ? `${summary.primaryCount} de ${summary.count} ventas · Método de pago predominante` : "No se pudo cargar el desglose"} icon={Wallet} loading={summaryLoading} />
       </KpiCarousel>
+      </div>
       <p className="text-xs text-zinc-400">Métricas según los filtros seleccionados; el desglose DIAN y de pagos excluye ventas canceladas.</p>
       {showWednesdayBanner && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl p-3 flex items-center justify-between gap-3 text-sm">
@@ -588,7 +641,42 @@ export default function Ventas() {
         </MoreFiltersModal>
       )}
 
-      <div className="bg-white rounded-xl border border-neutral-100 overflow-hidden">
+      {!loading && sales.length > 0 && (
+        <div className="md:hidden overflow-hidden rounded-2xl border border-slate-200/85 bg-white divide-y divide-slate-200/85">
+          {sales.map((s) => {
+            const cancelled = s.status === "CANCELLED";
+            return (
+              <div key={s._id} className={`space-y-2.5 p-3.5 ${cancelled ? "opacity-60" : ""}`}>
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      {s.category === "SPECIAL" ? (s.dianInvoiceNumber ? <CopySaleId value={String(s.dianInvoiceNumber)} /> : <span className="text-xs text-zinc-400">Sin número asignado</span>) : <CopySaleId value={String(s.cufe || s._id)} />}
+                    </div>
+                    <p className="truncate text-[11px] font-medium text-slate-500">
+                      {formatDate(s.createdAt, { day: "2-digit", month: "short", year: "numeric" })} · {formatTime(s.createdAt, { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      {s.cashierId?.name ? ` · ${s.cashierId.name}` : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0">{renderSaleActions(s)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/95 px-3 py-2 text-xs">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="shrink-0 font-extrabold tabular-nums text-slate-900">{money(s.total)}</span>
+                    {s.paymentMethod && <span className="truncate text-[11px] font-medium text-slate-500">· {paymentMethodLabels[s.paymentMethod] || s.paymentMethod}</span>}
+                    {isDeliverySale(s) && <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${s.paymentStatus === "PENDING_PAYMENT" ? "bg-orange-50 text-orange-600" : "bg-green-50 text-green-600"}`}>{s.paymentStatus === "PENDING_PAYMENT" ? "Pago pendiente" : "Pagado"}</span>}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {cancelled && <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-600">Cancelada</span>}
+                    <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusColors[s.dianStatus] || statusColors.NOT_EMITTED}`}>{dianStatusLabels[s.dianStatus] || s.dianStatus}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className={`bg-white rounded-xl border border-neutral-100 overflow-hidden ${!loading && sales.length > 0 ? "hidden md:block" : ""}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-neutral-500 text-left">
@@ -636,11 +724,7 @@ export default function Ventas() {
                 // BANCOLOMBIA server-side, pero se chequea también acá por
                 // si acaso una venta vieja tuviera paymentMethod
                 // DELIVERY_APP con un orderType distinto.
-                const isDeliveryAppSale =
-                  s.paymentMethod === "DELIVERY_APP" ||
-                  s.paymentMethod === "BANCOLOMBIA" ||
-                  s.orderType === "DIDI" ||
-                  s.orderType === "RAPPI";
+                const isDeliveryAppSale = isDeliverySale(s);
                 return (
                   <tr key={s._id} className={`border-t border-zinc-100 transition-colors hover:bg-zinc-50/80 ${cancelled ? "opacity-60" : ""}`}>
                     <td className="p-3">{s.category === "SPECIAL" ? (s.dianInvoiceNumber ? <CopySaleId value={String(s.dianInvoiceNumber)} /> : <span className="text-xs text-zinc-400">Sin número asignado</span>) : <CopySaleId value={String(s.cufe || s._id)} />}</td>
@@ -685,17 +769,7 @@ export default function Ventas() {
                     <td className="p-3"><span title={s.branchId?.name} className="whitespace-nowrap rounded-md bg-zinc-100 px-2.5 py-1 text-xs font-medium text-zinc-700">{s.branchId?.name?.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "") || s.branchId?.name || "—"}</span></td>
                     <td className="p-3 sticky right-0 z-10 bg-white border-l border-neutral-200">
                       <div className="flex justify-center">
-                        <ActionsMenu
-                          items={[
-                            { label: "Ver detalle", onClick: () => setViewingSale(s) },
-                            { label: "Descargar ticket", onClick: () => downloadTicket(s) },
-                            { label: "Reemitir DIAN", disabled: true, title: "La API no dispone de una operación de reemisión manual", onClick: () => {} },
-                            ...(!cancelled && isDeliveryAppSale && s.paymentStatus === "PENDING_PAYMENT"
-                              ? [{ label: "Confirmar Pago", onClick: () => handleConfirmPayment(s) }]
-                              : []),
-                            ...(!cancelled ? [{ label: "Anular", danger: true, onClick: () => handleCancel(s) }] : []),
-                          ]}
-                        />
+                        {renderSaleActions(s)}
                       </div>
                     </td>
                   </tr>

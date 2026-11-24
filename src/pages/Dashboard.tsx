@@ -17,7 +17,7 @@ import {
   Cell,
   Label,
 } from "recharts";
-import { CircleCheck, TriangleAlert, Receipt, Banknote, CreditCard, Landmark, RotateCcw, Wallet, Plus } from "lucide-react";
+import { CircleCheck, TriangleAlert, Receipt, Banknote, CreditCard, Landmark, RotateCcw, Wallet, Plus, ArrowDownRight, ArrowUpRight, ChevronDown, ShoppingCart, Store, TrendingUp } from "lucide-react";
 import { driver } from "driver.js";
 import "driver.js/dist/driver.css";
 import { adminApi } from "../services/api";
@@ -37,6 +37,22 @@ import {
 // nueva, para mantener consistencia visual (ver sección 5 del spec).
 const CHART_COLORS = ["#ea580c", "#f97316", "#fb923c", "#fdba74", "#fed7aa", "#78716c"];
 const BRAND = "#ea580c";
+const MOBILE_FILTER = "flex h-10 min-w-0 items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-3 text-xs font-semibold text-slate-800 shadow-sm";
+
+const KPI_DEFINITIONS = [
+  { key: "netTotal", label: "Ventas", icon: Banknote, lowerIsBetter: false },
+  { key: "totalPurchases", label: "Compras", icon: ShoppingCart, lowerIsBetter: true },
+  { key: "totalExpenses", label: "Gastos", icon: Wallet, lowerIsBetter: true },
+  { key: "profitability", label: "Rentabilidad", icon: TrendingUp, lowerIsBetter: false },
+] as const;
+
+type KpiSummary = Partial<Record<(typeof KPI_DEFINITIONS)[number]["key"], number>>;
+
+function previousPeriod(from: string, to: string) {
+  const days = (Date.parse(to) - Date.parse(from)) / 86_400_000 + 1;
+  if (!Number.isFinite(days) || days < 1) return null;
+  return { from: addDaysToDateString(from, -days), to: addDaysToDateString(from, -1) };
+}
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("es-CO")}`;
 
@@ -116,6 +132,50 @@ function StatCard({ label, value, badge, trend }: {
   );
 }
 
+function MobileKpis({ summary, previous, loading }: {
+  summary?: KpiSummary;
+  previous?: KpiSummary;
+  loading: boolean;
+}) {
+  return (
+    <section aria-label="Métricas del dashboard" aria-busy={loading} className="grid grid-cols-2 gap-2.5 md:hidden">
+      {KPI_DEFINITIONS.map(({ key, label, icon: Icon, lowerIsBetter }) => {
+        const actual = summary?.[key];
+        const baseline = previous?.[key];
+        const variation = actual !== undefined && baseline ? ((actual - baseline) / baseline) * 100 : null;
+        const rounded = variation === null ? null : Number(variation.toFixed(1));
+        const direction = rounded && actual !== undefined && baseline !== undefined ? Math.sign(actual - baseline) : 0;
+        const favorable = lowerIsBetter ? direction < 0 : direction > 0;
+        const DirectionIcon = direction > 0 ? ArrowUpRight : ArrowDownRight;
+        const tone = direction === 0 ? "bg-slate-100 text-slate-600"
+          : favorable ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700";
+        const primary = key === "netTotal";
+
+        return (
+          <article key={key} className={`erp-dashboard-card flex min-w-0 flex-col justify-between gap-1.5 rounded-2xl border bg-white px-3.5 py-3 shadow-sm ${primary ? "border-orange-500/30 bg-gradient-to-br from-orange-50/70 via-white to-white" : "border-slate-200/[0.85]"}`}>
+            <div className="flex items-center justify-between gap-1.5">
+              <h3 className="truncate text-xs font-semibold text-slate-500">{label}</h3>
+              <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-lg ${primary ? "bg-orange-500/10 text-orange-600" : "bg-slate-100 text-slate-600"}`}>
+                <Icon size={14} aria-hidden="true" />
+              </span>
+            </div>
+            <p className="break-words text-lg font-extrabold leading-none tracking-tight text-slate-900 tabular-nums sm:text-xl">
+              {loading || actual === undefined ? "—" : actual < 0 ? `-${money(Math.abs(actual))}` : money(actual)}
+            </p>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span title={rounded === null ? "Variación no disponible" : undefined} className={`inline-flex shrink-0 items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[11px] font-bold tabular-nums ${tone}`}>
+                {direction !== 0 && <DirectionIcon size={12} aria-hidden="true" />}
+                {rounded === null ? "—" : `${rounded > 0 ? "+" : ""}${rounded.toFixed(1)}%`}
+              </span>
+              <span title="vs. periodo anterior" className="truncate text-[10px] font-medium text-slate-500"><span className="sr-only"> vs. periodo anterior</span><span aria-hidden="true">vs periodo ant.</span></span>
+            </div>
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
 function sentenceCase(value: string) {
   const text = value.trim().toLocaleLowerCase("es-CO");
   return text.charAt(0).toLocaleUpperCase("es-CO") + text.slice(1);
@@ -130,9 +190,9 @@ function SkeletonCard({ className = "" }: { className?: string }) {
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({ message, compact = false }: { message: string; compact?: boolean }) {
   return (
-    <div className="erp-empty-state h-40 flex items-center justify-center text-sm text-neutral-400 text-center px-4">
+    <div className={`erp-empty-state flex items-center justify-center px-4 text-center text-sm text-neutral-400 ${compact ? "min-h-0 flex-1" : "h-40"}`}>
       <span className="erp-empty-icon" aria-hidden="true"><Receipt size={23} strokeWidth={1.5} /></span>
       <span>{message}</span>
     </div>
@@ -147,11 +207,11 @@ function EmptyState({ message }: { message: string }) {
 // seguiría corriendo su propia lógica de ResizeObserver de fondo.
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches
+    () => typeof window !== "undefined" && window.matchMedia("not all and (min-width: 768px)").matches
   );
 
   useEffect(() => {
-    const mql = window.matchMedia("(max-width: 767px)");
+    const mql = window.matchMedia("not all and (min-width: 768px)");
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mql.addEventListener("change", handler);
     return () => mql.removeEventListener("change", handler);
@@ -228,19 +288,38 @@ export default function Dashboard() {
   const [customTo, setCustomTo] = useState(todayColombia());
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [previous, setPrevious] = useState<{ key: string; summary: KpiSummary } | null>(null);
 
   const { from, to } = useMemo(() => {
     if (preset === "custom") return { from: customFrom, to: customTo };
     return computeRange(preset);
   }, [preset, customFrom, customTo]);
 
+  const periodKey = JSON.stringify([selectedBranch, from, to]);
+
   useEffect(() => {
+    let active = true;
     setLoading(true);
     adminApi
       .getDashboardMetrics({ branchId: selectedBranch || undefined, from, to })
-      .then(setMetrics)
-      .finally(() => setLoading(false));
+      .then((result) => { if (active) setMetrics(result); })
+      .catch(() => { if (active) setMetrics(null); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
   }, [selectedBranch, from, to]);
+
+  useEffect(() => {
+    const range = isMobile ? previousPeriod(from, to) : null;
+    if (!range) return;
+
+    let active = true;
+    setPrevious(null);
+    adminApi
+      .getDashboardMetrics({ branchId: selectedBranch || undefined, ...range })
+      .then(({ summary }) => { if (active) setPrevious({ key: periodKey, summary }); })
+      .catch(() => { if (active) setPrevious(null); });
+    return () => { active = false; };
+  }, [isMobile, selectedBranch, from, to, periodKey]);
 
   // Tour de onboarding — arranca automáticamente al montar el Dashboard
   // (la pantalla de entrada de ADMIN/MANAGER) mientras
@@ -356,58 +435,60 @@ export default function Dashboard() {
   // celular (ver useIsMobile arriba) — así ningún gráfico de Recharts se
   // monta dos veces.
   const salesTimelineWidget = (
-    <div className="erp-dashboard-card bg-white rounded-xl border border-zinc-200/70 p-5 shadow-sm lg:p-6 h-full">
-      <h3 className="font-semibold text-neutral-700 mb-3">
+    <div className="erp-dashboard-card flex h-52 min-w-0 flex-col rounded-2xl border border-slate-200/[0.85] bg-white p-4 shadow-sm sm:h-60 md:block md:h-full md:rounded-xl md:border-zinc-200/70 md:p-5 lg:p-6">
+      <h3 className="mb-2 shrink-0 text-sm font-semibold text-neutral-700 md:mb-3 md:text-base">
         Comportamiento de ventas ({timelineGranularity === "hour" ? "por hora" : "por día"})
       </h3>
       {!hasSales ? (
-        <EmptyState message="No hay ventas registradas en el rango seleccionado" />
+        <EmptyState compact={isMobile} message="No hay ventas registradas en el rango seleccionado" />
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={salesTimeline} margin={{ left: 0, right: 8 }}>
-            <defs>
-              <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={BRAND} stopOpacity={0.16} />
-                <stop offset="95%" stopColor={BRAND} stopOpacity={0.01} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-chart-grid, #f1f1f0)" vertical={false} />
-            <XAxis
-              dataKey="label"
-              className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
-              axisLine={false}
-              tickLine={false}
-              ticks={hourTicks}
-            />
-            <YAxis
-              className="text-xs text-zinc-400"
-              tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
-              axisLine={false}
-              tickLine={false}
-              // Recharts reserva 60px para el eje Y por default sin
-              // importar cuánto mida el texto real de los ticks ("$20k"
-              // no necesita eso) — en celular, con el widget a ~340px de
-              // ancho, ese sobrante se veía como un padding grande a la
-              // izquierda del gráfico. 40px alcanza sin recortar el texto
-              // más largo ("$20k") en ninguno de los dos tamaños.
-              width={40}
-              tickFormatter={(v) => `$${(v / 1000).toLocaleString("es-CO")}k`}
-            />
-            <Tooltip
-              formatter={(v: number) => money(v)}
-              labelFormatter={(label) => (timelineGranularity === "hour" ? `Hora: ${label}` : `Fecha: ${label}`)}
-              contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: "#e5e5e5" }}
-            />
-            <Area
-              type="monotone"
-              dataKey="total"
-              stroke={BRAND}
-              strokeWidth={2}
-              fill="url(#salesGradient)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <div className="min-h-0 flex-1 md:flex-none">
+          <ResponsiveContainer width="100%" height={isMobile ? "100%" : 260}>
+            <AreaChart data={salesTimeline} margin={{ left: 0, right: 8 }}>
+              <defs>
+                <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={BRAND} stopOpacity={0.16} />
+                  <stop offset="95%" stopColor={BRAND} stopOpacity={0.01} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--erp-chart-grid, #f1f1f0)" vertical={false} />
+              <XAxis
+                dataKey="label"
+                className="text-xs text-zinc-400"
+                tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
+                axisLine={false}
+                tickLine={false}
+                ticks={hourTicks}
+              />
+              <YAxis
+                className="text-xs text-zinc-400"
+                tick={{ fontSize: 11, fill: "var(--erp-chart-text, #a3a3a3)" }}
+                axisLine={false}
+                tickLine={false}
+                // Recharts reserva 60px para el eje Y por default sin
+                // importar cuánto mida el texto real de los ticks ("$20k"
+                // no necesita eso) — en celular, con el widget a ~340px de
+                // ancho, ese sobrante se veía como un padding grande a la
+                // izquierda del gráfico. 40px alcanza sin recortar el texto
+                // más largo ("$20k") en ninguno de los dos tamaños.
+                width={40}
+                tickFormatter={(v) => `$${(v / 1000).toLocaleString("es-CO")}k`}
+              />
+              <Tooltip
+                formatter={(v: number) => money(v)}
+                labelFormatter={(label) => (timelineGranularity === "hour" ? `Hora: ${label}` : `Fecha: ${label}`)}
+                contentStyle={{ fontSize: 12, borderRadius: 8, borderColor: "#e5e5e5" }}
+              />
+              <Area
+                type="monotone"
+                dataKey="total"
+                stroke={BRAND}
+                strokeWidth={2}
+                fill="url(#salesGradient)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );
@@ -564,7 +645,7 @@ export default function Dashboard() {
   // el rango elegido), de ahí el color condicional.
   const profitability = summary?.profitability ?? 0;
   const statsWidget = (
-    <KpiCarousel label="Métricas del dashboard" desktopColumns={4}>
+    !isMobile && <KpiCarousel label="Métricas del dashboard" desktopColumns={4}>
       <StatCard label="Ventas" value={money(summary?.netTotal || 0)} />
       <StatCard label="Compras" value={money(summary?.totalPurchases || 0)} />
       <StatCard label="Gastos" value={money(summary?.totalExpenses || 0)} />
@@ -645,69 +726,89 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="space-y-4">
-      {/* Barra de filtros superior */}
-      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-zinc-200/70 bg-white p-4 shadow-sm" aria-label="Filtros del dashboard">
-        <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
-          Sede
-          {isManager ? <span data-tour="branch-selector" className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700">{lockedBranchName || "Sede asignada"}</span> : <select data-tour="branch-selector" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"><option value="">Todas las sedes</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.name}</option>)}</select>}
-        </label>
-        {isMobile ? (
-          <div className="w-full space-y-1.5">
-            <p className="text-xs font-medium text-zinc-500">Rango de fecha</p>
-            <DateRangeFilterMobile from={from} to={to} onChange={(range) => {
-              if (!range.from && !range.to) {
-                setPreset("today");
-                return;
-              }
-              setCustomFrom(range.from);
-              setCustomTo(range.to);
-              setPreset("custom");
-            }} />
+    <div className="space-y-3 md:space-y-4">
+      {isMobile ? (
+        <div role="group" aria-label="Filtros del dashboard" className="grid grid-cols-2 gap-2 md:hidden">
+          <div className={`${MOBILE_FILTER} relative focus-within:ring-2 focus-within:ring-orange-500`} title={isManager ? lockedBranchName : branches.find((branch) => branch._id === selectedBranch)?.name}>
+            <Store size={14} className="shrink-0 text-orange-600" aria-hidden="true" />
+            <span className="flex-1 truncate" data-tour={isManager ? "branch-selector" : undefined}>
+              {isManager ? lockedBranchName || "Sede asignada" : branches.find((branch) => branch._id === selectedBranch)?.name || "Todas las sedes"}
+            </span>
+            {!isManager && (
+              <>
+                <ChevronDown size={14} className="shrink-0 text-slate-400" aria-hidden="true" />
+                <select aria-label="Sede" data-tour="branch-selector" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0">
+                  <option value="">Todas las sedes</option>
+                  {branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.name}</option>)}
+                </select>
+              </>
+            )}
           </div>
-        ) : (
-          <>
-        <label className="flex flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
-          Rango de fecha
-        <select
-          value={preset}
-          onChange={(e) => setPreset(e.target.value as DatePreset)}
-          className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
-        >
-          {presetLabels.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </select>
-        </label>
-
-        {preset === "custom" && (
-          <>
-            <input
-              type="date"
-              aria-label="Fecha inicial"
-              value={customFrom}
-              onChange={(e) => setCustomFrom(e.target.value)}
+          <DateRangeFilterMobile compact from={from} to={to} onChange={(range) => {
+            if (!range.from && !range.to) {
+              setPreset("today");
+              return;
+            }
+            setCustomFrom(range.from);
+            setCustomTo(range.to);
+            setPreset("custom");
+          }} />
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-end gap-4 rounded-xl border border-zinc-200/70 bg-white p-4 shadow-sm" aria-label="Filtros del dashboard">
+          <label className="flex min-w-0 flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
+            Sede
+            {isManager ? <span data-tour="branch-selector" className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-sm text-zinc-700">{lockedBranchName || "Sede asignada"}</span> : <select data-tour="branch-selector" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)} className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"><option value="">Todas las sedes</option>{branches.map((branch) => <option key={branch._id} value={branch._id}>{branch.name}</option>)}</select>}
+          </label>
+          <label className="flex flex-1 flex-col gap-1.5 text-xs font-medium text-zinc-500">
+            Rango de fecha
+            <select
+              value={preset}
+              onChange={(e) => setPreset(e.target.value as DatePreset)}
               className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-            <span className="text-neutral-400 text-sm">a</span>
-            <input
-              type="date"
-              aria-label="Fecha final"
-              value={customTo}
-              onChange={(e) => setCustomTo(e.target.value)}
-              className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </>
-        )}
-          </>
-        )}
+            >
+              {presetLabels.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
 
+          {preset === "custom" && (
+            <>
+              <input
+                type="date"
+                aria-label="Fecha inicial"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
+                className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <span className="text-neutral-400 text-sm">a</span>
+              <input
+                type="date"
+                aria-label="Fecha final"
+                value={customTo}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className="max-w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </>
+          )}
+        </div>
+      )}
 
-      </div>
-
-      {loading ? (
+      {isMobile ? (
+        <div className="space-y-3">
+          <MobileKpis summary={summary} previous={previous?.key === periodKey ? previous.summary : undefined} loading={loading} />
+          {loading ? <div aria-hidden="true" className="h-52 animate-pulse rounded-2xl border border-slate-200 bg-white sm:h-60" /> : (
+            <>
+              {salesTimelineWidget}
+              <Carousel slides={[topProductsWidget, expensesWidget]} />
+              <Carousel slides={[paymentMethodsWidget, criticalStockWidget]} />
+            </>
+          )}
+        </div>
+      ) : loading ? (
         <div className="space-y-4">
           <KpiCarousel label="Métricas del dashboard" desktopColumns={4}>
             <SkeletonCard />
@@ -715,33 +816,13 @@ export default function Dashboard() {
             <SkeletonCard />
             <SkeletonCard />
           </KpiCarousel>
-          {isMobile ? (
-            <div className="space-y-4">
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-4">
-              <SkeletonCard className="col-span-2" />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-              <SkeletonCard />
-            </div>
-          )}
-        </div>
-      ) : isMobile ? (
-        // Móvil: Ventas/Compras/Gastos/Rentabilidad van arriba en un grid
-        // carrusel de KPI, luego la
-        // venta por hora/día a ancho completo, y los otros 4 widgets se
-        // agrupan en 2 carruseles de a 2 para no apilar 4 tarjetas seguidas
-        // en una pantalla angosta (pedido explícito).
-        <div className="space-y-4">
-          {statsWidget}
-          {salesTimelineWidget}
-          <Carousel slides={[topProductsWidget, expensesWidget]} />
-          <Carousel slides={[paymentMethodsWidget, criticalStockWidget]} />
+          <div className="grid grid-cols-3 gap-4">
+            <SkeletonCard className="col-span-2" />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         </div>
       ) : (
         <div className="space-y-4">

@@ -4,10 +4,10 @@ import {
   BadgeDollarSign, Calculator, Layers, LayoutDashboard, LogOut,
   PanelLeftClose, PanelLeftOpen, MapPinHouse, ShoppingCart, User, Wallet, X, type LucideIcon,
 } from "lucide-react";
-import { adminApi } from "../services/api";
+import type { AdminMenuProfile } from "./Layout";
 
 interface SidebarProps {
-  name?: string;
+  profile: AdminMenuProfile;
   role?: string;
   isOpen?: boolean;
   onClose?: () => void;
@@ -25,12 +25,6 @@ interface NavigationSection {
   title: string;
   items: NavigationItem[];
 }
-
-const roleLabels: Record<string, string> = {
-  ADMIN: "Administrador",
-  MANAGER: "Gerente de sede",
-  CASHIER: "Cajero",
-};
 
 // Los permisos visuales complementan las restricciones del backend.
 // Las anclas del tour se conservan en los enlaces correspondientes.
@@ -59,11 +53,6 @@ const sections: NavigationSection[] = [
     ],
   },
 ];
-
-function getInitials(name: string): string {
-  return name.trim().split(/\s+/).slice(0, 2)
-    .map((part) => part.charAt(0)).join("").toUpperCase();
-}
 
 function SidebarLink({ item, onNavigate, collapsed }: {
   collapsed: boolean;
@@ -94,29 +83,18 @@ function SidebarLink({ item, onNavigate, collapsed }: {
   );
 }
 
-function UserProfile({ name, role, collapsed }: Pick<SidebarProps, "name" | "role"> & { collapsed: boolean }) {
-  const displayName = name?.trim() || "Usuario";
-
-  const handleLogout = async () => {
-    try {
-      await adminApi.logout();
-    } catch {
-      // Permite volver al login aunque la solicitud falle.
-    }
-    window.location.href = "/login";
-  };
-
+function UserProfile({ userName, userInitials, userRole, handleLogout, collapsed }: AdminMenuProfile & { collapsed: boolean }) {
   return (
     <footer className="shrink-0 border-t border-zinc-800 py-4">
       <div className={`mx-3 flex items-center justify-between gap-2 rounded-xl bg-zinc-900/50 p-3 ${collapsed ? "md:flex-col md:px-0" : ""}`}>
         <div className="flex min-w-0 items-center gap-3">
-          <div title={displayName}
+          <div title={userName}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-600/15 text-xs font-semibold text-orange-400">
-            {getInitials(displayName)}
+            {userInitials}
           </div>
           <div className={`min-w-0 ${collapsed ? "md:hidden" : ""}`}>
-            <p className="truncate text-sm font-medium text-zinc-100" title={displayName}>{displayName}</p>
-            <p className="mt-0.5 truncate text-xs text-zinc-500">{roleLabels[role || ""] || role || "Sesión activa"}</p>
+            <p className="truncate text-sm font-medium text-zinc-100" title={userName}>{userName}</p>
+            <p className="mt-0.5 truncate text-xs text-zinc-500">{userRole}</p>
           </div>
         </div>
         <button
@@ -133,7 +111,7 @@ function UserProfile({ name, role, collapsed }: Pick<SidebarProps, "name" | "rol
   );
 }
 
-export default function Sidebar({ name, role, isOpen = false, onClose }: SidebarProps) {
+export default function Sidebar({ profile, role, isOpen = false, onClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   return (
     <>
@@ -178,7 +156,7 @@ export default function Sidebar({ name, role, isOpen = false, onClose }: Sidebar
             );
           })}
         </nav>
-        <UserProfile name={name} role={role} collapsed={collapsed} />
+        <UserProfile {...profile} collapsed={collapsed} />
       </aside>
     </>
   );

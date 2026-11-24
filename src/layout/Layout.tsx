@@ -21,6 +21,33 @@ const TITLES: Record<string, string> = {
   "/finanzas/reportes": "Finanzas — Reportes",
 };
 
+const roleLabels: Record<string, string> = {
+  ADMIN: "Administrador",
+  MANAGER: "Gerente de sede",
+  CASHIER: "Cajero",
+};
+
+function getInitials(name: string): string {
+  return name.trim().split(/\s+/).slice(0, 2)
+    .map((part) => part.charAt(0)).join("").toUpperCase();
+}
+
+export interface AdminMenuProfile {
+  userName: string;
+  userInitials: string;
+  userRole: string;
+  handleLogout: () => Promise<void>;
+}
+
+async function handleLogout() {
+  try {
+    await adminApi.logout();
+  } catch {
+    // Permite volver al login aunque la solicitud falle.
+  }
+  window.location.href = "/login";
+}
+
 /** Sede seleccionada globalmente, expuesta vía contexto simple (localStorage + evento) */
 export function useSelectedBranch() {
   const [branchId, setBranchId] = useState(localStorage.getItem("admin_selected_branch") || "");
@@ -48,6 +75,7 @@ export default function Layout() {
   }, []);
   const { dark, toggleTheme } = useErpTheme();
   const location = useLocation();
+  const isDashboard = location.pathname === "/dashboard";
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranch, setSelectedBranch] = useSelectedBranch();
   // Perfil del admin/gerente — viene del chequeo único que hace
@@ -56,6 +84,13 @@ export default function Layout() {
   // monta cuando `RequireAuth` ya confirmó que `admin` existe (ver
   // App.tsx) — no hace falta un estado "cargando" acá.
   const { admin } = useAuthSession();
+  const userName = admin?.name?.trim() || "Usuario";
+  const profile: AdminMenuProfile = {
+    userName,
+    userInitials: getInitials(userName),
+    userRole: roleLabels[admin?.role || ""] || admin?.role || "Sesión activa",
+    handleLogout,
+  };
   // Solo importa en móvil (`< md`) — en desktop el Sidebar siempre está
   // visible y estas props no hacen nada, ver Sidebar.tsx.
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -110,7 +145,7 @@ export default function Layout() {
   return (
     <div className="flex h-dvh w-full overflow-hidden bg-neutral-50">
       <Sidebar
-        name={admin?.name}
+        profile={profile}
         role={admin?.role}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -124,10 +159,11 @@ export default function Layout() {
           selectedBranch={selectedBranch}
           onBranchChange={setSelectedBranch}
           lockedBranchName={lockedBranchName}
-          hideBranchSelector={location.pathname === "/dashboard"}
+          hideBranchSelector={isDashboard}
+          profile={profile}
           onMenuClick={() => setSidebarOpen(true)}
         />
-        <main className="min-h-0 flex-1 overflow-y-auto overscroll-none p-6">
+        <main className={`min-h-0 flex-1 overflow-y-auto overscroll-none ${isDashboard ? "max-md:bg-slate-50 max-md:px-4 max-md:py-3 md:p-6" : "p-6"}`}>
           <Outlet context={{ branches, lockedBranchName, isManager }} />
         </main>
       </div>

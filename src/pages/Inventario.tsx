@@ -32,14 +32,16 @@ const productName = (value: string) => {
 };
 const stockOf = (product: InventoryProduct, branch: string) => branch ? product.branchStock ?? 0 : product.totalStock ?? 0;
 
-function StockStatus({ product, quantity }: { product: InventoryProduct; quantity: number }) {
+function StockStatus({ product, quantity, compact = false }: { product: InventoryProduct; quantity: number; compact?: boolean }) {
   const [label, colors] = !product.active
     ? ["Inactivo", "border-zinc-200 bg-zinc-50 text-zinc-500"]
     : quantity <= 0 ? ["Agotado", "border-red-200 bg-red-50 text-red-700"]
     : quantity < product.minStock ? ["Bajo Stock", "border-amber-200 bg-amber-50 text-amber-700"]
     : ["En Stock", "border-emerald-200 bg-emerald-50 text-emerald-700"];
-  return <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-medium ${colors}`}>{label}</span>;
+  return <span className={`inline-flex whitespace-nowrap rounded-full border py-0.5 ${compact ? "px-2 text-[11px] font-semibold" : "px-2.5 text-xs font-medium"} ${colors}`}>{label}</span>;
 }
+
+const mobileActionClass = "flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition-colors active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 disabled:opacity-50";
 
 function InventoryKpi({ label, value, icon: Icon, danger = false, loading }: {
   label: string; value: string; icon: typeof Package; danger?: boolean; loading: boolean;
@@ -258,14 +260,43 @@ export default function Inventario() {
     setLowStockOnly(false);
   };
 
+  const kpiLoadingOr = (value: string) => summaryLoading ? "…" : summaryError ? "—" : value;
+
   return (
     <div className="space-y-4">
       <section aria-label="Resumen de inventario" className="space-y-2">
-        <KpiCarousel label="Métricas de inventario">
-          <InventoryKpi label="Total Productos" value={summaryError ? "—" : activeProducts.length.toLocaleString("es-CO")} icon={Package} loading={summaryLoading} />
-          <InventoryKpi label="Productos Agotados" value={summaryError ? "—" : exhausted.toLocaleString("es-CO")} icon={PackageX} danger loading={summaryLoading} />
-          <InventoryKpi label="Valor Total Estimado del Inventario" value={summaryError ? "—" : money(estimatedValue)} icon={Wallet} loading={summaryLoading} />
-        </KpiCarousel>
+        {/* Móvil (< md): bento grid sin carrusel — 2 KPIs arriba + valor total a ancho completo. */}
+        <div className="md:hidden grid grid-cols-2 gap-2.5" aria-busy={summaryLoading}>
+          <div className="p-3.5 rounded-2xl bg-white border border-slate-200/85 shadow-sm flex flex-col justify-between gap-2">
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="text-xs font-semibold text-slate-500 truncate">Total Productos</span>
+              <span className="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0"><Package className="w-3.5 h-3.5" aria-hidden="true" /></span>
+            </div>
+            <div className="text-xl font-extrabold text-slate-900 tabular-nums leading-none">{kpiLoadingOr(activeProducts.length.toLocaleString("es-CO"))}</div>
+          </div>
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-50/75 via-white to-white border border-rose-200/80 shadow-sm flex flex-col justify-between gap-2">
+            <div className="flex items-center justify-between gap-1.5">
+              <span className="text-xs font-semibold text-rose-700/90 truncate">Productos Agotados</span>
+              <span className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 flex items-center justify-center shrink-0"><PackageX className="w-3.5 h-3.5" aria-hidden="true" /></span>
+            </div>
+            <div className="text-xl font-extrabold text-rose-600 tabular-nums leading-none">{kpiLoadingOr(exhausted.toLocaleString("es-CO"))}</div>
+          </div>
+          <div className="col-span-2 p-3.5 rounded-2xl bg-gradient-to-r from-orange-50/70 via-white to-white border border-orange-500/25 shadow-sm flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-slate-600 truncate">Valor Total Estimado del Inventario</p>
+              <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums mt-1 leading-none">{kpiLoadingOr(money(estimatedValue))}</p>
+            </div>
+            <span className="w-10 h-10 rounded-xl bg-orange-500/15 text-orange-600 flex items-center justify-center shrink-0"><Wallet className="w-5 h-5" aria-hidden="true" /></span>
+          </div>
+        </div>
+        {/* Escritorio (>= md): sin cambios. */}
+        <div className="hidden md:block">
+          <KpiCarousel label="Métricas de inventario">
+            <InventoryKpi label="Total Productos" value={summaryError ? "—" : activeProducts.length.toLocaleString("es-CO")} icon={Package} loading={summaryLoading} />
+            <InventoryKpi label="Productos Agotados" value={summaryError ? "—" : exhausted.toLocaleString("es-CO")} icon={PackageX} danger loading={summaryLoading} />
+            <InventoryKpi label="Valor Total Estimado del Inventario" value={summaryError ? "—" : money(estimatedValue)} icon={Wallet} loading={summaryLoading} />
+          </KpiCarousel>
+        </div>
         <p className="text-xs text-zinc-500">Productos activos · {selectedBranch ? "Sede seleccionada" : "Todas las sedes"} · Valor estimado a precio de venta.</p>
         {summaryError && <p role="alert" className="text-xs text-red-600">No se pudo cargar el resumen. <button type="button" onClick={() => setRevision((value) => value + 1)} className="underline">Reintentar</button></p>}
       </section>
@@ -281,8 +312,79 @@ export default function Inventario() {
           <button type="button" aria-pressed={showInactive} title="Incluir productos inactivos" onClick={() => setShowInactive((value) => !value)} className={`shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-medium active:border-orange-200 active:bg-orange-50 active:text-orange-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 ${showInactive ? "border-orange-200 bg-orange-50 text-orange-700" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100"}`}>Inactivos</button>
         </div>
       </div>
-      <div className="bg-white rounded-xl border border-zinc-200/80 overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/[0.85] bg-white md:rounded-xl md:border-zinc-200/80">
+        <div className="md:hidden" aria-busy={loading}>
+          {loading ? (
+            <div className="flex justify-center p-10">
+              <LogoLoader size="sm" text="Cargando..." />
+            </div>
+          ) : products.length === 0 ? (
+            <div className="p-6 text-center text-neutral-400">
+              <p>No hay productos que coincidan con los filtros.</p>
+              <button type="button" onClick={clearFilters} className="mt-3 rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-zinc-600 hover:bg-zinc-50">Limpiar filtros</button>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-200/[0.85] [html[data-erp-theme=dark]_&]:divide-slate-800" aria-label="Productos de inventario">
+              {products.map((product) => {
+                const name = productName(product.name);
+                const details = [productName(product.category || ""), product.sku].filter(Boolean).join(" · ");
+                const quantity = stockOf(product, selectedBranch);
+                const updating = deletingId === product._id;
+
+                return (
+                  <li key={product._id} className="space-y-2.5 p-3.5 transition-colors hover:bg-slate-50/70">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200/70 bg-slate-100 text-slate-400">
+                          {product.imageUrl ? (
+                            <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <Hamburger size={20} aria-hidden="true" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-bold leading-tight text-slate-900" title={name}>{name}</p>
+                          {details && <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500" title={details}>{details}</p>}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label={`Acciones para ${name}`}>
+                        <button type="button" aria-label="Editar" onClick={() => openEdit(product)} className={`${mobileActionClass} hover:bg-slate-100 hover:text-slate-900`}>
+                          <SquarePen size={16} aria-hidden="true" />
+                        </button>
+                        {isAdmin && (
+                          <button type="button" aria-label="Manejar inventario" onClick={() => setManagedStockProduct(product)} className={`${mobileActionClass} hover:bg-orange-50 hover:text-orange-600`}>
+                            <LayersPlus size={16} aria-hidden="true" />
+                          </button>
+                        )}
+                        {product.active ? (
+                          <button type="button" aria-label="Desactivar" disabled={updating} onClick={() => handleDelete(product)} className={`${mobileActionClass} hover:bg-red-50 hover:text-red-600`}>
+                            <Trash2 size={16} aria-hidden="true" />
+                          </button>
+                        ) : (
+                          <button type="button" aria-label="Reactivar" disabled={updating} onClick={() => handleReactivate(product)} className={`${mobileActionClass} hover:bg-green-50 hover:text-green-600`}>
+                            <ShieldCheck size={16} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/[0.95] px-3 py-2 text-xs [html[data-erp-theme=dark]_&]:bg-slate-800/[0.55]">
+                      <div className="flex min-w-0 items-baseline gap-x-3 gap-y-1 max-[359px]:flex-wrap">
+                        <span className="min-w-0 font-medium text-slate-500">
+                          Precio: <strong className="break-words font-extrabold tabular-nums text-slate-900">{money(product.price)}</strong>
+                        </span>
+                        <span className="min-w-0 font-medium text-slate-500">
+                          Stock: <strong className="break-words font-bold tabular-nums text-slate-800">{quantity.toLocaleString("es-CO")}</strong>
+                        </span>
+                      </div>
+                      <div className="shrink-0"><StockStatus product={product} quantity={quantity} compact /></div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead className="bg-neutral-50 text-neutral-500 text-left">
               <tr>

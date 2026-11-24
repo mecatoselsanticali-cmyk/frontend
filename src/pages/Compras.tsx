@@ -7,7 +7,7 @@ import { useSelectedBranch } from "../layout/Layout";
 import DataTable from "../components/DataTable";
 import PurchaseModal from "../components/PurchaseModal";
 import PurchaseEditModal from "../components/PurchaseEditModal";
-import { Calendar, Package, User, Plus, FileText, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Calendar, Package, User, Plus, FileText, ShoppingBag, ShoppingCart, type LucideIcon } from "lucide-react";
 import ActionsMenu from "../components/ActionsMenu";
 import { formatDate, formatTime } from "../utils/timezone";
 
@@ -26,6 +26,9 @@ function FilterSelect({ label, icon: Icon, value, onChange, options }: {
     </select>
   </label>;
 }
+
+const branchShortName = (name?: string) =>
+  name ? titleCase(name.replace(/^Mecatos\s+el\s+Santi\s*[-–—:]?\s*/i, "").replace(/^Sede\s+/i, "") || name) : "";
 
 function PurchaseDate({ value }: { value: string }) {
   return <div className="whitespace-nowrap"><p className="font-medium text-zinc-700">{formatDate(value, { day: "2-digit", month: "short", year: "numeric" })}</p><p className="mt-1 text-xs text-zinc-400">{formatTime(value, { hour: "2-digit", minute: "2-digit", hour12: true })}</p></div>;
@@ -159,36 +162,17 @@ export default function Compras() {
     setRegisteredBy("");
   };
 
-  return (
-    <div className="space-y-4">
-      <KpiCarousel label="Métricas de compras" desktopColumns={1}>
-        <section aria-label="Resumen de compras" aria-busy={loading} className="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
-            <div><h2 className="text-xs font-medium text-zinc-500">Total Compras del periodo</h2><p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-zinc-900">{loading ? "…" : money(totalAmount)}</p><p className="mt-2 text-xs text-zinc-500">{loading ? "Cargando registros…" : `${total} ${total === 1 ? "transacción" : "transacciones"}`} · {from || to ? "Periodo seleccionado" : "Todo el historial"}</p></div>
-            <span className="rounded-xl bg-orange-50 p-3 text-orange-600"><ShoppingCart size={22} aria-hidden="true" /></span>
-          </div>
-        </section>
-      </KpiCarousel>
-      {isMobile ? (
-        <ComprasFiltersMobile from={from} to={to} productId={productId} registeredBy={registeredBy} products={productOptions.map((product) => ({ ...product, name: titleCase(product.name) }))} users={userOptions.map((user) => ({ ...user, name: titleCase(user.name) }))} onRangeChange={(range) => { setFrom(range.from); setTo(range.to); }} onProductChange={setProductId} onUserChange={setRegisteredBy} onCreate={() => setModalOpen(true)} onClear={clearFilters} />
-      ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white p-4">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
-            <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2">
-              <legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" />
-              <input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-              <span className="text-xs text-zinc-400">a</span>
-              <input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
-            </fieldset>
-            <FilterSelect label="Producto" icon={Package} value={productId} onChange={setProductId} options={productOptions} />
-            <FilterSelect label="Usuario" icon={User} value={registeredBy} onChange={setRegisteredBy} options={userOptions} />
-            {(from || to || productId || registeredBy) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-orange-600">Limpiar filtros</button>}
-          </div>
-          <button type="button" onClick={() => setModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"><Plus size={17} aria-hidden="true" />Nueva compra</button>
-        </div>
-      )}
+  const renderPurchaseActions = (r: any) => (
+    <ActionsMenu
+      items={[
+        { label: "Editar", onClick: () => setEditingPurchase(r) },
+        { label: "Eliminar", danger: true, onClick: () => handleDelete(r) },
+      ]}
+    />
+  );
 
-      <DataTable
+  const table = (
+    <DataTable
         loading={loading}
         rows={purchases}
         emptyMessage="No hay compras registradas todavía"
@@ -248,18 +232,73 @@ export default function Compras() {
             stickyRight: true,
             centerHeader: true,
             render: (r) => (
-              <div className="flex justify-center">
-                <ActionsMenu
-                  items={[
-                    { label: "Editar", onClick: () => setEditingPurchase(r) },
-                    { label: "Eliminar", danger: true, onClick: () => handleDelete(r) },
-                  ]}
-                />
-              </div>
+              <div className="flex justify-center">{renderPurchaseActions(r)}</div>
             ),
           },
         ]}
-      />
+    />
+  );
+
+  return (
+    <div className="space-y-4">
+      <KpiCarousel label="Métricas de compras" desktopColumns={1}>
+        <section aria-label="Resumen de compras" aria-busy={loading} className="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-sm">
+          <div className="flex items-start justify-between gap-4">
+            <div><h2 className="text-xs font-medium text-zinc-500">Total Compras del periodo</h2><p className="mt-3 text-3xl font-bold tracking-tight tabular-nums text-zinc-900">{loading ? "…" : money(totalAmount)}</p><p className="mt-2 text-xs text-zinc-500">{loading ? "Cargando registros…" : `${total} ${total === 1 ? "transacción" : "transacciones"}`} · {from || to ? "Periodo seleccionado" : "Todo el historial"}</p></div>
+            <span className="rounded-xl bg-orange-50 p-3 text-orange-600"><ShoppingCart size={22} aria-hidden="true" /></span>
+          </div>
+        </section>
+      </KpiCarousel>
+      {isMobile ? (
+        <ComprasFiltersMobile from={from} to={to} productId={productId} registeredBy={registeredBy} products={productOptions.map((product) => ({ ...product, name: titleCase(product.name) }))} users={userOptions.map((user) => ({ ...user, name: titleCase(user.name) }))} onRangeChange={(range) => { setFrom(range.from); setTo(range.to); }} onProductChange={setProductId} onUserChange={setRegisteredBy} onCreate={() => setModalOpen(true)} onClear={clearFilters} />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200/80 bg-white p-4">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-3">
+            <fieldset className="flex min-w-0 flex-wrap items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2">
+              <legend className="sr-only">Rango de fechas</legend><Calendar size={17} className="text-zinc-400" aria-hidden="true" />
+              <input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={(event) => setFrom(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+              <span className="text-xs text-zinc-400">a</span>
+              <input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={(event) => setTo(event.target.value)} className="min-w-0 rounded bg-white py-0.5 text-sm text-zinc-600 focus:outline-none focus:ring-2 focus:ring-orange-500" />
+            </fieldset>
+            <FilterSelect label="Producto" icon={Package} value={productId} onChange={setProductId} options={productOptions} />
+            <FilterSelect label="Usuario" icon={User} value={registeredBy} onChange={setRegisteredBy} options={userOptions} />
+            {(from || to || productId || registeredBy) && <button type="button" onClick={clearFilters} className="rounded-lg px-2 py-2 text-xs font-medium text-zinc-500 hover:bg-zinc-50 hover:text-orange-600">Limpiar filtros</button>}
+          </div>
+          <button type="button" onClick={() => setModalOpen(true)} className="flex items-center gap-2 rounded-xl bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2"><Plus size={17} aria-hidden="true" />Nueva compra</button>
+        </div>
+      )}
+
+      {loading || purchases.length === 0 ? table : (
+        <>
+          {/* Móvil (< md): filas compactas al 100% del ancho, sin scroll horizontal. */}
+          <div className="md:hidden overflow-hidden rounded-2xl border border-slate-200/85 bg-white divide-y divide-slate-200/85">
+            {purchases.map((r) => (
+              <div key={r._id} className="space-y-2.5 p-3.5">
+                <div className="flex items-start justify-between gap-2.5">
+                  <div className="flex min-w-0 flex-1 items-start gap-2.5">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600"><ShoppingBag className="h-4 w-4" aria-hidden="true" /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold leading-snug text-slate-900">{titleCase(r.supplierName)}</p>
+                      <p className="mt-0.5 truncate text-[11px] font-medium text-slate-500">
+                        {formatDate(r.createdAt, { day: "2-digit", month: "short", year: "numeric" })} · {formatTime(r.createdAt, { hour: "2-digit", minute: "2-digit", hour12: true })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0">{renderPurchaseActions(r)}</div>
+                </div>
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-slate-50/95 px-3 py-2 text-xs">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="shrink-0"><span className="font-medium text-slate-400">Total: </span><span className="font-extrabold tabular-nums text-slate-900">{money(r.amount)}</span></div>
+                    {r.branchId?.name && <span className="truncate text-[11px] text-slate-500">· {branchShortName(r.branchId.name)}</span>}
+                  </div>
+                  {r.productId && <span className="max-w-[45%] shrink-0 truncate rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">{titleCase(r.productId.name)}{r.quantity ? ` × ${r.quantity}` : ""}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block">{table}</div>
+        </>
+      )}
 
       {!loading && total > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-neutral-500">
